@@ -1,21 +1,22 @@
 import { useId } from "react";
 import { designs, finishes, type NailSet } from "@/lib/nails";
 import { FINGERS } from "./parts";
+import handPhoto from "@/assets/hand-sim.jpg";
 
 /** Qué capas mostrar en la simulación */
 export type Layer = "todo" | "acabados" | "disenos";
 
-type Finger = { px: number; py: number; len: number; w: number; rot: number };
-// Mano izquierda vista por el dorso: meñique → pulgar (de izquierda a derecha)
-const HAND: Finger[] = [
-  { px: 46, py: 230, len: 100, w: 30, rot: -11 },
-  { px: 86, py: 218, len: 146, w: 34, rot: -4 },
-  { px: 128, py: 214, len: 166, w: 36, rot: 0 },
-  { px: 169, py: 220, len: 146, w: 34, rot: 5 },
-  { px: 192, py: 285, len: 104, w: 38, rot: 50 },
+// Uñas sobre la foto de la mano izquierda (dorso): meñique → pulgar.
+// cx/cy = cutícula en píxeles de la foto, r = medio ancho, bed = largo de la uña natural.
+type Spot = { cx: number; cy: number; r: number; bed: number; rot: number };
+const SPOTS: Spot[] = [
+  { cx: 216, cy: 414, r: 12.5, bed: 41, rot: -2 },
+  { cx: 306, cy: 324, r: 18, bed: 48, rot: -1 },
+  { cx: 390, cy: 279, r: 19.5, bed: 48, rot: 0 },
+  { cx: 471, cy: 326, r: 17.5, bed: 43, rot: 3 },
+  { cx: 606, cy: 576, r: 14.5, bed: 46, rot: 27 },
 ];
-const W = 660;
-const PALM = "M24 236 Q22 202 46 198 L186 202 Q208 208 210 256 L208 340 Q204 392 172 400 L60 400 Q26 392 24 340 Z";
+const X0 = 170, HW = 490, GAP = 20, W = HW * 2 + GAP, Y0 = 130, H = 640;
 
 const v = (t: string) => `var(--${t})`;
 
@@ -46,8 +47,8 @@ function rand(seed: number) {
   return () => ((s = (s * 9301 + 49297) % 233280) / 233280);
 }
 
-function Nail({ uid, idx, shape, ext, w, fin, design }: { uid: string; idx: number; shape: string | null; ext: number; w: number; fin: string[]; design: string | null }) {
-  const r = w * 0.37, bed = w * 0.8, h = bed + ext;
+function Nail({ uid, idx, shape, ext, r, bed, fin, design }: { uid: string; idx: number; shape: string | null; ext: number; r: number; bed: number; fin: string[]; design: string | null }) {
+  const h = bed + ext;
   const d = nailPath(shape, r, h);
   const clip = `${uid}c${idx}`;
   const has = (f: string) => fin.includes(f);
@@ -55,8 +56,8 @@ function Nail({ uid, idx, shape, ext, w, fin, design }: { uid: string; idx: numb
   const tipDepth = Math.max(5, ext * 0.65 + 4);
   const R = rand(idx + 3);
   return (
-    <g transform={`translate(0 ${-0 + 0})`}>
-      <path d={d} transform="translate(0.8 1.6)" style={{ fill: v("skin-shadow") }} opacity={0.6} />
+    <g>
+      <path d={d} transform="translate(1.5 2.5)" style={{ fill: v("nail-edge") }} opacity={0.25} />
       <clipPath id={clip}><path d={d} /></clipPath>
       <g clipPath={`url(#${clip})`}>
         <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: base }} />
@@ -74,6 +75,7 @@ function Nail({ uid, idx, shape, ext, w, fin, design }: { uid: string; idx: numb
         {has("efectos") && Array.from({ length: 22 }, (_, k) => (
           <circle key={k} cx={(R() * 2 - 1) * r} cy={-R() * h} r={0.5 + R() * 0.9} style={{ fill: v(k % 3 ? "nail-tip" : "nail-gold") }} opacity={0.9} />
         ))}
+        <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: `url(#${uid}shade)` }} />
         {design && <Design id={design} r={r} h={h} uid={uid} />}
         {has("matte")
           ? <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: v("nail-tip") }} opacity={0.14} />
@@ -136,35 +138,22 @@ function Design({ id, r, h, uid }: { id: string; r: number; h: number; uid: stri
 /** Simulación de ambas manos con forma, largo, acabados y diseños por uña */
 export function HandSim({ set, fingers, layer = "todo" }: { set: NailSet; fingers: (string | null)[]; layer?: Layer }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const ext = (set.length - 1) * 7;
+  const ext = (set.length - 1) * 10;
   const fin = layer === "disenos" ? [] : set.finishes;
   const finNames = fin.map((f) => finishes.find((x) => x.id === f)?.name).filter(Boolean).join(", ");
 
   const hand = (side: 0 | 1) => (
-    <g transform={side ? `translate(${W} 0) scale(-1 1)` : undefined}>
-      {/* Contorno: primero en tono sombra y más grueso, luego la piel encima */}
-      {[true, false].map((outline) => (
-        <g key={String(outline)} style={{ fill: v(outline ? "skin-shadow" : "skin"), stroke: outline ? v("skin-shadow") : "none" }} strokeWidth={outline ? 3 : 0}>
-          <path d={PALM} />
-          {HAND.map((f, k) => (
-            <rect key={k} x={-f.w / 2} y={-f.len} width={f.w} height={f.len + 40} rx={f.w / 2} transform={`translate(${f.px} ${f.py}) rotate(${f.rot})`} />
-          ))}
-        </g>
-      ))}
-      {HAND.map((f, k) => {
+    <g transform={side ? `translate(${W + X0} 0) scale(-1 1)` : `translate(${-X0} 0)`}>
+      <clipPath id={`${uid}tile${side}`}><rect x={X0} y={Y0} width={HW} height={H} rx={28} /></clipPath>
+      <image href={handPhoto} x={0} y={0} width={768} height={1024} clipPath={`url(#${uid}tile${side})`} preserveAspectRatio="none" />
+      {SPOTS.map((f, k) => {
         const i = side ? 9 - k : k;
         const design = layer === "acabados" ? null : (fingers[i] ?? null);
         const dName = designs.find((x) => x.id === design)?.name;
-        const bed = f.w * 0.8;
         return (
-          <g key={k} transform={`translate(${f.px} ${f.py}) rotate(${f.rot})`}>
+          <g key={k} transform={`translate(${f.cx} ${f.cy}) rotate(${f.rot})`}>
             <title>{`${FINGERS[i]} ${side ? "derecho" : "izquierdo"}: ${[finNames, dName].filter(Boolean).join(" + ") || "sin decoración"}`}</title>
-            {[0.42, 0.7].slice(0, k === 4 ? 1 : 2).map((t) => (
-              <path key={t} d={`M${-f.w * 0.22} ${-f.len * t} Q0 ${-f.len * t - 3} ${f.w * 0.22} ${-f.len * t}`} fill="none" style={{ stroke: v("skin-shadow") }} strokeWidth={1} strokeLinecap="round" opacity={0.7} />
-            ))}
-            <g transform={`translate(0 ${-f.len + bed + 3})`}>
-              <Nail uid={uid} idx={i} shape={set.shape} ext={ext} w={f.w} fin={fin} design={design} />
-            </g>
+            <Nail uid={uid} idx={i} shape={set.shape} ext={ext} r={f.r} bed={f.bed} fin={fin} design={design} />
           </g>
         );
       })}
@@ -172,8 +161,14 @@ export function HandSim({ set, fingers, layer = "todo" }: { set: NailSet; finger
   );
 
   return (
-    <svg viewBox={`0 -24 ${W} 404`} className="h-auto w-full" role="img" aria-label="Simulación de tus manos con el set elegido">
+    <svg viewBox={`0 ${Y0} ${W} ${H}`} className="h-auto w-full" role="img" aria-label="Simulación de tus manos con el set elegido">
       <defs>
+        <linearGradient id={`${uid}shade`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#000" stopOpacity={0.14} />
+          <stop offset="0.25" stopColor="#000" stopOpacity={0} />
+          <stop offset="0.75" stopColor="#000" stopOpacity={0} />
+          <stop offset="1" stopColor="#000" stopOpacity={0.16} />
+        </linearGradient>
         <linearGradient id={`${uid}bb`} x1="0" y1="1" x2="0" y2="0">
           <stop offset="0" style={{ stopColor: v("nail-pink") }} />
           <stop offset="1" style={{ stopColor: v("nail-tip") }} />

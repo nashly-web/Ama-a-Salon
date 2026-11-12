@@ -1,5 +1,7 @@
 import { designs, finishes, basePrice, retiroPrice, shapes, systems, MAX_NAILS, nailsUsed, rd, type NailSet } from "@/lib/nails";
+import { useState } from "react";
 import { Hands, setLabel, setPhoto } from "./parts";
+import { HandSim, type Layer } from "./HandSim";
 
 export function priceRows(set: NailSet) {
   const sys = systems.find((s) => s.id === set.system);
@@ -16,6 +18,7 @@ export function priceRows(set: NailSet) {
 }
 
 export function Resumen({ set, fingers, total, quote }: { set: NailSet; fingers: (string | null)[]; total: number; quote: string }) {
+  const [layer, setLayer] = useState<Layer>("todo");
   const complementos = set.finishes.map((f) => finishes.find((x) => x.id === f)?.name).filter(Boolean).join(", ") || "Ninguno";
   return (
     <div className="grid gap-6 md:grid-cols-[320px_1fr]">
@@ -28,6 +31,18 @@ export function Resumen({ set, fingers, total, quote }: { set: NailSet; fingers:
 
       <div className="space-y-4">
         <h1 className="text-5xl text-primary">¡Tu set está tomando forma!</h1>
+        <div className="rounded-3xl border border-border bg-secondary p-5 shadow-soft">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-display text-2xl">Así va tu set</p>
+            <div className="flex gap-2">
+              {([["todo", "Todas las capas"], ["acabados", "Acabados"], ["disenos", "Diseños"]] as const).map(([id, t]) => (
+                <button key={id} type="button" onClick={() => setLayer(id)} className={`rounded-full px-3 py-1.5 text-xs ${layer === id ? "bg-primary text-primary-foreground" : "bg-card"}`}>{t}</button>
+              ))}
+            </div>
+          </div>
+          <HandSim set={set} fingers={fingers} layer={layer} />
+          <p className="text-center text-xs text-muted-foreground">Simulación con todos tus servicios · interpretación aproximada</p>
+        </div>
         <div className="space-y-3 rounded-3xl border border-border bg-card p-5 shadow-soft">
           <Line k="Sistema · Largo · Forma" v={setLabel(set)} />
           <Line k="Uñas decoradas" v={`${nailsUsed(set)} de ${MAX_NAILS}`} />

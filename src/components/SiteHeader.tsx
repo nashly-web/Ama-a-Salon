@@ -9,6 +9,7 @@ export function SiteHeader() {
       </Link>
       <nav className="flex shrink-0 gap-2 text-sm">
         <Link to="/servicios" className="rounded-full bg-card px-4 py-2 shadow-soft" activeProps={{ className: "bg-primary text-primary-foreground" }}>Servicios</Link>
+        <Link to="/estudio" className="rounded-full bg-card px-4 py-2 shadow-soft" activeProps={{ className: "bg-primary text-primary-foreground" }}>Estudio de uñas</Link>
       </nav>
     </header>
   );
