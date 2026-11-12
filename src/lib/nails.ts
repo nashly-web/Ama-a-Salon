@@ -120,3 +120,62 @@ export function totalPrice(set: NailSet) {
 }
 
 export const rd = (n = 0) => `RD$ ${n.toLocaleString("en-US")}`;
+
+/** Diseños de cada uña (10 dedos): cada uña puede llevar varios diseños combinados */
+export type Fingers = string[][];
+
+export const emptyFingers = (): Fingers => Array.from({ length: MAX_NAILS }, () => []);
+
+/** Ordena los diseños de una uña según la lista oficial para que la combinación sea estable */
+const sortIds = (ids: string[]) => designs.map((d) => d.id).filter((id) => ids.includes(id));
+
+/** Cuántas uñas llevan cada diseño (es lo que se cobra: precio por uña × uñas) */
+export function countDesigns(f: Fingers) {
+  const out: Record<string, number> = {};
+  for (const ids of f) for (const id of ids) out[id] = (out[id] ?? 0) + 1;
+  return out;
+}
+
+/** Pone o quita un diseño en una uña sin tocar los demás diseños de esa uña */
+export function toggleDesign(f: Fingers, i: number, id: string): Fingers {
+  return f.map((ids, k) => (k !== i ? ids : ids.includes(id) ? ids.filter((x) => x !== id) : sortIds([...ids, id])));
+}
+
+/** Añade el diseño a la primera uña que aún no lo tenga */
+export function addDesign(f: Fingers, id: string): Fingers {
+  const i = f.findIndex((ids) => !ids.includes(id));
+  return i < 0 ? f : toggleDesign(f, i, id);
+}
+
+/** Quita el diseño de la última uña que lo tenga */
+export function removeDesign(f: Fingers, id: string): Fingers {
+  let i = -1;
+  f.forEach((ids, k) => { if (ids.includes(id)) i = k; });
+  return i < 0 ? f : toggleDesign(f, i, id);
+}
+
+/** Uñas con al menos un diseño */
+export const nailsDecorated = (f: Fingers) => f.filter((ids) => ids.length).length;
+
+export const comboPrice = (ids: string[]) => ids.reduce((a, id) => a + (designs.find((d) => d.id === id)?.price ?? 0), 0);
+export const comboName = (ids: string[]) => ids.map((id) => designs.find((d) => d.id === id)?.name ?? id).join(" + ");
+
+/** Combinaciones distintas de diseños y en qué uñas está cada una */
+export function designCombos(f: Fingers) {
+  const map = new Map<string, { ids: string[]; fingers: number[] }>();
+  f.forEach((ids, i) => {
+    if (!ids.length) return;
+    const s = sortIds(ids);
+    const key = s.join("+");
+    const c = map.get(key) ?? { ids: s, fingers: [] };
+    c.fingers.push(i);
+    map.set(key, c);
+  });
+  return [...map.values()]
+    .map((c) => ({ ...c, name: comboName(c.ids), perNail: comboPrice(c.ids), price: comboPrice(c.ids) * c.fingers.length }))
+    .sort((a, b) => b.ids.length - a.ids.length || b.fingers.length - a.fingers.length);
+}
+
+export const FINGER_NAMES = ["Meñique", "Anular", "Medio", "Índice", "Pulgar", "Pulgar", "Índice", "Medio", "Anular", "Meñique"];
+/** Nombre corto de la uña: dedos 0–4 mano izquierda, 5–9 mano derecha */
+export const fingerName = (i: number) => `${FINGER_NAMES[i]} ${i < 5 ? "izq." : "der."}`;

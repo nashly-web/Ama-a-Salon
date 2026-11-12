@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { designs, finishes, type NailSet } from "@/lib/nails";
+import { comboName, finishes, type Fingers, type NailSet } from "@/lib/nails";
 import { FINGERS } from "./parts";
 import handPhoto from "@/assets/hand-sim.jpg";
 
@@ -47,7 +47,7 @@ function rand(seed: number) {
   return () => ((s = (s * 9301 + 49297) % 233280) / 233280);
 }
 
-function Nail({ uid, idx, shape, ext, r, bed, fin, design }: { uid: string; idx: number; shape: string | null; ext: number; r: number; bed: number; fin: string[]; design: string | null }) {
+function Nail({ uid, idx, shape, ext, r, bed, fin, ds }: { uid: string; idx: number; shape: string | null; ext: number; r: number; bed: number; fin: string[]; ds: string[] }) {
   const h = bed + ext;
   const d = nailPath(shape, r, h);
   const clip = `${uid}c${idx}`;
@@ -66,7 +66,7 @@ function Nail({ uid, idx, shape, ext, r, bed, fin, design }: { uid: string; idx:
           <ellipse cx={0} cy={-h * 0.5} rx={r * 1.6} ry={h * 0.06} transform={`rotate(-32 0 ${-h * 0.5})`} style={{ fill: v("nail-tip") }} opacity={0.7} />
         </>)}
         {has("chrome") && <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: `url(#${uid}chrome)` }} opacity={0.88} />}
-        {(has("french-luna") || design === "french") && <ellipse cx={0} cy={-h} rx={r * 1.3} ry={tipDepth} style={{ fill: v("nail-tip") }} />}
+        {(has("french-luna") || ds.includes("french")) && <ellipse cx={0} cy={-h} rx={r * 1.3} ry={tipDepth} style={{ fill: v("nail-tip") }} />}
         {has("french-fino") && <rect x={-r - 2} y={-h - 2} width={2 * r + 4} height={Math.max(4, ext * 0.3 + 3.5)} style={{ fill: v("nail-tip") }} />}
         {has("cristal") && (<>
           <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: v("nail-tip") }} opacity={0.22} />
@@ -76,7 +76,7 @@ function Nail({ uid, idx, shape, ext, r, bed, fin, design }: { uid: string; idx:
           <circle key={k} cx={(R() * 2 - 1) * r} cy={-R() * h} r={0.5 + R() * 0.9} style={{ fill: v(k % 3 ? "nail-tip" : "nail-gold") }} opacity={0.9} />
         ))}
         <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: `url(#${uid}shade)` }} />
-        {design && <Design id={design} r={r} h={h} uid={uid} />}
+        <Designs ds={ds} r={r} h={h} uid={uid} top={ds.includes("french") ? tipDepth : 0} />
         {has("matte")
           ? <rect x={-r - 2} y={-h - 4} width={2 * r + 4} height={h + 10} style={{ fill: v("nail-tip") }} opacity={0.14} />
           : <rect x={-r * 0.62} y={-h * 0.86} width={r * 0.3} height={h * 0.58} rx={r * 0.15} style={{ fill: v("nail-tip") }} opacity={0.55} />}
@@ -90,10 +90,22 @@ function Star({ x, y, s }: { x: number; y: number; s: number }) {
   return <path d={`M${x} ${y - s} L${x + s * 0.3} ${y - s * 0.3} L${x + s} ${y} L${x + s * 0.3} ${y + s * 0.3} L${x} ${y + s} L${x - s * 0.3} ${y + s * 0.3} L${x - s} ${y} L${x - s * 0.3} ${y - s * 0.3}Z`} style={{ fill: v("nail-tip") }} />;
 }
 
-function Design({ id, r, h, uid }: { id: string; r: number; h: number; uid: string }) {
-  const cy = -h * 0.5;
+/** Pinta todos los diseños de una uña en capas: piedras al fondo, trazos encima y motivos centrales repartidos */
+function Designs({ ds, r, h, uid, top }: { ds: string[]; r: number; h: number; uid: string; top: number }) {
+  const center = ds.filter((id) => id === "flores" || id === "3d");
+  const ys = center.length > 1 ? [-h * 0.3, -h * 0.66] : [-h * 0.5];
+  return (
+    <g>
+      {ds.includes("piedras") && <Design id="piedras" r={r} h={h} uid={uid} top={top} />}
+      {ds.includes("sencillo") && <Design id="sencillo" r={r} h={h} uid={uid} />}
+      {center.map((id, k) => <Design key={id} id={id} r={r} h={h} uid={uid} cy={ys[k]} scale={center.length > 1 ? 0.8 : 1} />)}
+    </g>
+  );
+}
+
+function Design({ id, r, h, uid, cy = -h * 0.5, top = 0, scale = 1 }: { id: string; r: number; h: number; uid: string; cy?: number | undefined; top?: number | undefined; scale?: number | undefined }) {
   if (id === "flores") {
-    const pr = r * 0.34, dist = r * 0.42;
+    const pr = r * 0.34 * scale, dist = r * 0.42 * scale;
     return (
       <g>
         {[0, 72, 144, 216, 288].map((a) => (
@@ -106,13 +118,13 @@ function Design({ id, r, h, uid }: { id: string; r: number; h: number; uid: stri
   if (id === "piedras") {
     const out = [];
     const step = 4.6;
-    for (let y = -h + 2, row = 0; y < 2; y += step * 0.86, row++)
+    for (let y = -h + 2 + top, row = 0; y < 2; y += step * 0.86, row++)
       for (let x = -r + (row % 2 ? step / 2 : 0); x <= r + 1; x += step)
         out.push(<circle key={`${x}-${y}`} cx={x} cy={y} r={2.1} style={{ fill: `url(#${uid}gem)`, stroke: v("nail-edge") }} strokeWidth={0.25} />);
     return <g>{out}</g>;
   }
   if (id === "3d") {
-    const s = r * 0.8;
+    const s = r * 0.8 * scale;
     const heart = `M0 ${s * 0.35} C${-s} ${-s * 0.3} ${-s * 0.45} ${-s} 0 ${-s * 0.45} C${s * 0.45} ${-s} ${s} ${-s * 0.3} 0 ${s * 0.35}Z`;
     return (
       <g transform={`translate(0 ${cy})`}>
@@ -136,7 +148,7 @@ function Design({ id, r, h, uid }: { id: string; r: number; h: number; uid: stri
 }
 
 /** Simulación de ambas manos con forma, largo, acabados y diseños por uña */
-export function HandSim({ set, fingers, layer = "todo" }: { set: NailSet; fingers: (string | null)[]; layer?: Layer }) {
+export function HandSim({ set, fingers, layer = "todo" }: { set: NailSet; fingers: Fingers; layer?: Layer }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const ext = (set.length - 1) * 10;
   const fin = layer === "disenos" ? [] : set.finishes;
@@ -148,12 +160,12 @@ export function HandSim({ set, fingers, layer = "todo" }: { set: NailSet; finger
       <image href={handPhoto} x={0} y={0} width={768} height={1024} clipPath={`url(#${uid}tile${side})`} preserveAspectRatio="none" />
       {SPOTS.map((f, k) => {
         const i = side ? 9 - k : k;
-        const design = layer === "acabados" ? null : (fingers[i] ?? null);
-        const dName = designs.find((x) => x.id === design)?.name;
+        const ds = layer === "acabados" ? [] : (fingers[i] ?? []);
+        const dName = ds.length ? comboName(ds) : "";
         return (
           <g key={k} transform={`translate(${f.cx} ${f.cy}) rotate(${f.rot})`}>
             <title>{`${FINGERS[i]} ${side ? "derecho" : "izquierdo"}: ${[finNames, dName].filter(Boolean).join(" + ") || "sin decoración"}`}</title>
-            <Nail uid={uid} idx={i} shape={set.shape} ext={ext} r={f.r} bed={f.bed} fin={fin} design={design} />
+            <Nail uid={uid} idx={i} shape={set.shape} ext={ext} r={f.r} bed={f.bed} fin={fin} ds={ds} />
           </g>
         );
       })}

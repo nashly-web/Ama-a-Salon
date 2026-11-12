@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { nailImg, lengthImg } from "@/lib/nail-images";
-import { systems, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, MAX_NAILS, rd, type NailSet, type Option } from "@/lib/nails";
+import { systems, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, toggleDesign, addDesign, removeDesign, designCombos, fingerName, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
 import { Photo, Title } from "@/components/estudio/parts";
 import { Disenos } from "@/components/estudio/Disenos";
 import { Resumen, priceRows } from "@/components/estudio/Resumen";
@@ -32,14 +32,7 @@ function Card({ active, onClick, children }: { active?: boolean; onClick?: () =>
 }
 
 const steps = ["Sistema", "Largo", "Forma", "Acabados", "Diseños", "Resumen", "Envío"];
-const emptyFingers = (): (string | null)[] => Array(MAX_NAILS).fill(null);
 const QUOTE_KEY = "amaia-cotizaciones";
-
-function countDesigns(f: (string | null)[]) {
-  const out: Record<string, number> = {};
-  for (const id of f) if (id) out[id] = (out[id] ?? 0) + 1;
-  return out;
-}
 
 function Estudio() {
   const [step, setStep] = useState(0);
@@ -55,13 +48,13 @@ function Estudio() {
   const items = set.systems.length + (set.retiro && retiroPrice(set) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
   const canNext = step === 0 ? set.systems.length > 0 : step === 2 ? !!set.shape : true;
 
-  const setFingers = (f: (string | null)[]) => {
+  const setFingers = (f: Fingers) => {
     setFingersState(f);
     setSet((s) => ({ ...s, designs: countDesigns(f) }));
   };
-  const plus = (id: string) => { const i = fingers.indexOf(null); if (i < 0) return; const f = [...fingers]; f[i] = id; setFingers(f); };
-  const minus = (id: string) => { const i = fingers.lastIndexOf(id); if (i < 0) return; const f = [...fingers]; f[i] = null; setFingers(f); };
-  const tap = (i: number, id: string | null) => { const f = [...fingers]; f[i] = f[i] === id ? null : id; setFingers(f); };
+  const plus = (id: string) => setFingers(addDesign(fingers, id));
+  const minus = (id: string) => setFingers(removeDesign(fingers, id));
+  const tap = (i: number, id: string | null) => { if (id) setFingers(toggleDesign(fingers, i, id)); };
 
   const send = () => {
     localStorage.setItem(QUOTE_KEY, String(count + 1));
@@ -72,7 +65,7 @@ function Estudio() {
     setSet(emptySet); setFingersState(emptyFingers()); setDatos(emptyDatos); setSent(false); setStep(0);
   };
 
-  if (sent) return <Confirmacion quote={quote} whatsappText={whatsappText(set, datos, total, quote)} onNew={reset} />;
+  if (sent) return <Confirmacion quote={quote} whatsappText={whatsappText(set, fingers, datos, total, quote)} onNew={reset} />;
 
   const wide = step >= 4;
   const back = step === 5 ? "◂ Editar set" : step === 6 ? "◂ Volver al resumen" : "◂ Volver";
@@ -180,10 +173,12 @@ function Estudio() {
   );
 }
 
-function whatsappText(set: NailSet, d: Datos, total: number, quote: string) {
+function whatsappText(set: NailSet, fingers: Fingers, d: Datos, total: number, quote: string) {
+  const combos = designCombos(fingers);
   const lines = [
     `Hola Amaïa, soy ${d.nombre}. Esta es mi cotización Cliente #${quote}:`,
     ...priceRows(set).map((r) => `• ${r.label}: ${r.price ? rd(r.price) : "Incluido"}`),
+    ...(combos.length ? ["Diseños por uña:", ...combos.map((c) => `  – ${c.name} (${c.fingers.map(fingerName).join(", ")})`)] : []),
     `Total estimado: ${rd(total)}`,
     `Modalidad: ${d.modalidad === "domicilio" ? `A domicilio (${d.direccion})` : "En el salón"}`,
   ];

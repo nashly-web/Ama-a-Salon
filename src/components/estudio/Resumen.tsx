@@ -1,6 +1,6 @@
-import { designs, finishes, chosenSystems, systemLinePrice, retiroPrice, shapes, sizeOf, MAX_NAILS, nailsUsed, rd, type NailSet } from "@/lib/nails";
+import { designs, finishes, chosenSystems, systemLinePrice, retiroPrice, shapes, sizeOf, MAX_NAILS, nailsDecorated, designCombos, fingerName, rd, type Fingers, type NailSet } from "@/lib/nails";
 import { useState } from "react";
-import { Hands, setLabel, setPhoto } from "./parts";
+import { Hands, NailTile, setLabel, setPhoto } from "./parts";
 import { HandSim, type Layer } from "./HandSim";
 
 export function priceRows(set: NailSet) {
@@ -16,12 +16,13 @@ export function priceRows(set: NailSet) {
   const fs = set.finishes.map((f) => finishes.find((x) => x.id === f)!).filter(Boolean);
   if (fs.length) rows.push({ label: `Acabados: ${fs.map((f) => f.name).join(", ")}`, price: fs.reduce((a, f) => a + f.price, 0) });
   const ds = Object.entries(set.designs).filter(([, n]) => n).map(([id, n]) => ({ d: designs.find((x) => x.id === id)!, n }));
-  if (ds.length) rows.push({ label: `Diseños: ${ds.map(({ d, n }) => `${d.name} ×${n}`).join(", ")}`, price: ds.reduce((a, { d, n }) => a + d.price * n, 0) });
+  for (const { d, n } of ds) rows.push({ label: `Diseño ${d.name} · ${n} ${n === 1 ? "uña" : "uñas"} × ${rd(d.price)}`, price: d.price * n });
   return rows;
 }
 
-export function Resumen({ set, fingers, total, quote }: { set: NailSet; fingers: (string | null)[]; total: number; quote: string }) {
+export function Resumen({ set, fingers, total, quote }: { set: NailSet; fingers: Fingers; total: number; quote: string }) {
   const [layer, setLayer] = useState<Layer>("todo");
+  const combos = designCombos(fingers);
   const complementos = set.finishes.map((f) => finishes.find((x) => x.id === f)?.name).filter(Boolean).join(", ") || "Ninguno";
   return (
     <div className="grid gap-6 md:grid-cols-[320px_1fr]">
@@ -48,9 +49,35 @@ export function Resumen({ set, fingers, total, quote }: { set: NailSet; fingers:
         </div>
         <div className="space-y-3 rounded-3xl border border-border bg-card p-5 shadow-soft">
           <Line k="Sistema · Largo · Forma" v={setLabel(set)} />
-          <Line k="Uñas decoradas" v={`${nailsUsed(set)} de ${MAX_NAILS}`} />
+          <Line k="Uñas decoradas" v={`${nailsDecorated(fingers)} de ${MAX_NAILS}`} />
           <Line k="Complementos" v={complementos} />
         </div>
+        {combos.length > 0 && (
+          <div className="rounded-3xl border border-border bg-card p-5 shadow-soft">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="font-display text-2xl">Combinaciones de diseño</p>
+              <span className="text-xs text-muted-foreground">{combos.length} {combos.length === 1 ? "combinación" : "combinaciones"} en {nailsDecorated(fingers)} uñas</span>
+            </div>
+            <ul className="mt-3 divide-y divide-border">
+              {combos.map((c) => (
+                <li key={c.ids.join("+")} className="flex items-center gap-4 py-3">
+                  <NailTile ids={c.ids} index={c.fingers[0] ?? 2} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium leading-tight">{c.name}</p>
+                    {c.ids.length > 1 && <div className="mt-1 flex flex-wrap gap-1">
+                      {c.ids.map((id) => <span key={id} className="rounded-full bg-secondary px-2 py-0.5 text-xs">{designs.find((d) => d.id === id)?.name}</span>)}
+                    </div>}
+                    <p className="mt-1 text-xs text-muted-foreground">{c.fingers.map(fingerName).join(", ")}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm">{rd(c.price)}</p>
+                    <p className="text-xs text-muted-foreground">{rd(c.perNail)} × {c.fingers.length} {c.fingers.length === 1 ? "uña" : "uñas"}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="rounded-3xl border border-border bg-card p-5 shadow-soft">
           <ul className="divide-y divide-border">
             {priceRows(set).map((r) => (
