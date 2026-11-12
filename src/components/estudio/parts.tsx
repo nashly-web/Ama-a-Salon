@@ -1,5 +1,5 @@
 import { nailImg, lengthImg } from "@/lib/nail-images";
-import { designs, lengths, shapes, systems, type NailSet } from "@/lib/nails";
+import { chosenSystems, designs, lengths, shapes, type NailSet } from "@/lib/nails";
 
 export const FINGERS = ["Meñique", "Anular", "Medio", "Índice", "Pulgar", "Pulgar", "Índice", "Medio", "Anular", "Meñique"];
 const HEIGHTS = [44, 54, 60, 54, 40, 40, 54, 60, 54, 44];
@@ -17,7 +17,7 @@ export function setPhoto(set: NailSet) {
 }
 
 export function setLabel(set: NailSet) {
-  const sys = systems.find((x) => x.id === set.system)?.name ?? "Sin sistema";
+  const sys = chosenSystems(set).map((x) => x.name).join(" + ") || "Sin sistema";
   const sh = shapes.find((x) => x.id === set.shape)?.name ?? "Sin forma";
   return `${sys} · #${set.length} · ${sh}`;
 }

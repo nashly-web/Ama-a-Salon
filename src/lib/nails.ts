@@ -62,7 +62,8 @@ export const EXTRA_NAIL_PRICE = 100;
 export const MAX_NAILS = 10;
 
 export type NailSet = {
-  system: string | null;
+  /** Sistemas elegidos: se pueden combinar varios y se suman */
+  systems: string[];
   length: number;
   shape: string | null;
   finishes: string[];
@@ -73,7 +74,7 @@ export type NailSet = {
   retiro?: boolean;
 };
 
-export const emptySet: NailSet = { system: null, length: 4, shape: null, finishes: [], designs: {}, retoque: false, retiro: false };
+export const emptySet: NailSet = { systems: [], length: 1, shape: null, finishes: [], designs: {}, retoque: false, retiro: false };
 
 export function sizeOf(length: number) {
   return sizes[Math.floor((length - 1) / 2)] ?? "S";
@@ -84,17 +85,26 @@ export function systemPrice(systemId: string | null, length: number) {
   return s?.prices[Math.floor((length - 1) / 2)] ?? 0;
 }
 
-/** Precio de la base: set nuevo según tamaño, o retoque si se eligió */
-export function basePrice(set: NailSet) {
-  const s = systems.find((x) => x.id === set.system);
-  if (!s) return 0;
+/** Sistemas elegidos, en el orden de la lista oficial */
+export function chosenSystems(set: NailSet) {
+  return systems.filter((x) => set.systems.includes(x.id));
+}
+
+/** Precio de un sistema dentro del set: retoque si se eligió y existe, si no según tamaño */
+export function systemLinePrice(s: System, set: NailSet) {
   if (set.retoque && s.retoque != null) return s.retoque;
   return systemPrice(s.id, set.length);
 }
 
+/** Precio de la base: suma de todos los sistemas elegidos */
+export function basePrice(set: NailSet) {
+  return chosenSystems(set).reduce((a, s) => a + systemLinePrice(s, set), 0);
+}
+
+/** Retiro de cada sistema elegido que tenga precio de retiro */
 export function retiroPrice(set: NailSet) {
   if (!set.retiro) return 0;
-  return systems.find((x) => x.id === set.system)?.retiro ?? 0;
+  return chosenSystems(set).reduce((a, s) => a + (s.retiro ?? 0), 0);
 }
 
 export function nailsUsed(set: NailSet) {
