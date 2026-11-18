@@ -20,7 +20,7 @@ export const Route = createFileRoute("/servicios")({
 function Servicios() {
   return (
     <div className="min-h-screen">
-      <SiteHeader />
+      <SiteHeader back />
       <main className="mx-auto max-w-6xl px-6 pb-16">
         <h1 className="text-5xl text-primary">Servicios y precios</h1>
         <p className="mt-2 text-muted-foreground">Todo lo que ofrecemos, en un solo lugar.</p>

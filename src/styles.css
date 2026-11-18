@@ -69,6 +69,7 @@
   --font-display: "Cormorant Garamond", serif;
   --font-sans: "Jost", sans-serif;
   --shadow-soft: var(--shadow-soft);
+  --shadow-glow: var(--shadow-glow);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -127,6 +128,9 @@
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
   --shadow-soft: 0 20px 50px -20px color-mix(in oklab, var(--primary) 30%, transparent);
+  /* CTA flotante del Escáner */
+  --gradient-cta: linear-gradient(135deg, var(--primary), var(--nail-cateye));
+  --shadow-glow: 0 22px 55px -18px color-mix(in oklab, var(--primary) 65%, transparent);
 }
 
 .dark {
@@ -186,4 +190,65 @@
 
 @utility bg-gradient-soft {
   background-image: var(--gradient-soft);
+}
+
+/* Escáner de diseño: línea de luz que recorre la foto mientras se analiza */
+@keyframes scan-sweep {
+  0% { top: -33%; }
+  100% { top: 100%; }
+}
+@utility animate-scan {
+  animation: scan-sweep 2.4s ease-in-out infinite alternate;
+}
+
+/* Escáner: puntero que invita a tocar un sistema */
+@keyframes finger-tap {
+  0%, 45% { transform: scale(1); }
+  60% { transform: scale(0.85); }
+  75%, 100% { transform: scale(1); }
+}
+@utility animate-finger-tap {
+  animation: finger-tap 1.5s ease-in-out both;
+}
+@keyframes tap-ring {
+  0%, 50% { opacity: 0; transform: scale(0.4); }
+  60% { opacity: 0.6; transform: scale(0.6); }
+  85% { opacity: 0; transform: scale(1.6); }
+  100% { opacity: 0; }
+}
+@utility animate-tap-ring {
+  animation: tap-ring 1.5s ease-out both;
+}
+
+/* CTA flotante del Escáner: degradado, halo que respira y destello dorado */
+@utility bg-gradient-cta {
+  background-image: var(--gradient-cta);
+}
+
+@keyframes cta-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.96); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+@utility animate-cta-pulse {
+  animation: cta-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes cta-shine {
+  0% { transform: translateX(-140%) skewX(-12deg); }
+  55%, 100% { transform: translateX(260%) skewX(-12deg); }
+}
+@utility cta-shine {
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+    width: 45%;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--nail-gold) 75%, transparent), transparent);
+    transform: translateX(-140%) skewX(-12deg);
+    animation: cta-shine 3.4s ease-in-out infinite;
+  }
 }

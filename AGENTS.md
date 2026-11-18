@@ -32,3 +32,7 @@ use the editor.
 ## Project rules
 - The nail studio (`/estudio`) keeps each step screen in `src/components/estudio/`; the route only holds shared state, so screens stay small and testable.
 - Per-finger design assignment is the source of truth for design counts, so the hand view and the price always agree.
+- The design scanner (`/escaner`) only maps photos to catalog ids from `src/lib/nails.ts`; prices always come from `totalPrice`, never from the model, so the quote matches the Estudio.
+- Scanner AI calls live in `src/lib/scan.server.ts` behind the `scanNails` server function; photos stay in memory and only the resulting design passes to the Estudio via sessionStorage, so no image is ever stored.
+- Nail systems are mutually exclusive: every system pick goes through `selectSystem` in `src/lib/nails.ts`, so the Estudio, the scanner and the handoff never hold two systems.
+- Estudio step access goes through `canReach` in `src/lib/estudio-steps.ts` (only Sistema and Forma are required), so the step pills, Siguiente and the send button share one rule.

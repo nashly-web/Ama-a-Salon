@@ -48,7 +48,7 @@ export const finishes: Option[] = [
   { id: "matte", name: "Matte", price: 200 },
 ];
 
-/** Precios por uña */
+/** Precio del diseño en las 10 uñas; cada uña cobra la décima parte (ver designPerNail) */
 export const designs: Option[] = [
   { id: "sencillo", name: "Nailart simple", price: 200, list: 300 },
   { id: "piedras", name: "Uña piedra completa", price: 150 },
@@ -60,6 +60,12 @@ export const designs: Option[] = [
 
 export const EXTRA_NAIL_PRICE = 100;
 export const MAX_NAILS = 10;
+
+/** Lo que cuesta un diseño en UNA uña: el precio de las 10 uñas dividido entre 10 */
+export const designPerNail = (id: string) => (designs.find((d) => d.id === id)?.price ?? 0) / MAX_NAILS;
+
+/** Texto del precio de un diseño: por uña y por las 10 uñas */
+export const designPriceLabel = (d: Option) => `${d.note === "Desde" ? "Desde " : ""}${rd(designPerNail(d.id))} por uña · ${rd(d.price)} las ${MAX_NAILS}`;
 
 export type NailSet = {
   /** Sistemas elegidos: se pueden combinar varios y se suman */
@@ -84,6 +90,17 @@ export function systemPrice(systemId: string | null, length: number) {
   const s = systems.find((x) => x.id === systemId);
   return s?.prices[Math.floor((length - 1) / 2)] ?? 0;
 }
+
+/** Sistemas de menor a mayor precio para el largo dado (empates: orden de la lista oficial) */
+export function systemsByPrice(length: number) {
+  return [...systems].sort((a, b) => systemPrice(a.id, length) - systemPrice(b.id, length));
+}
+
+/** El sistema más económico para el largo dado */
+export const cheapestSystem = (length: number) => systemsByPrice(length)[0]!.id;
+
+/** Sistemas excluyentes: elegir uno reemplaza al anterior, nunca quedan dos a la vez */
+export const selectSystem = (id: string): string[] => [id];
 
 /** Sistemas elegidos, en el orden de la lista oficial */
 export function chosenSystems(set: NailSet) {
@@ -115,8 +132,8 @@ export function totalPrice(set: NailSet) {
   let t = basePrice(set) + retiroPrice(set);
   t += shapes.find((s) => s.id === set.shape)?.price ?? 0;
   for (const f of set.finishes) t += finishes.find((x) => x.id === f)?.price ?? 0;
-  for (const [id, n] of Object.entries(set.designs)) t += (designs.find((d) => d.id === id)?.price ?? 0) * n;
-  return t;
+  for (const [id, n] of Object.entries(set.designs)) t += designPerNail(id) * n;
+  return Math.round(t);
 }
 
 export const rd = (n = 0) => `RD$ ${n.toLocaleString("en-US")}`;
@@ -129,7 +146,7 @@ export const emptyFingers = (): Fingers => Array.from({ length: MAX_NAILS }, () 
 /** Ordena los diseños de una uña según la lista oficial para que la combinación sea estable */
 const sortIds = (ids: string[]) => designs.map((d) => d.id).filter((id) => ids.includes(id));
 
-/** Cuántas uñas llevan cada diseño (es lo que se cobra: precio por uña × uñas) */
+/** Cuántas uñas llevan cada diseño (se cobra: precio por uña × uñas) */
 export function countDesigns(f: Fingers) {
   const out: Record<string, number> = {};
   for (const ids of f) for (const id of ids) out[id] = (out[id] ?? 0) + 1;
@@ -157,7 +174,7 @@ export function removeDesign(f: Fingers, id: string): Fingers {
 /** Uñas con al menos un diseño */
 export const nailsDecorated = (f: Fingers) => f.filter((ids) => ids.length).length;
 
-export const comboPrice = (ids: string[]) => ids.reduce((a, id) => a + (designs.find((d) => d.id === id)?.price ?? 0), 0);
+export const comboPrice = (ids: string[]) => ids.reduce((a, id) => a + designPerNail(id), 0);
 export const comboName = (ids: string[]) => ids.map((id) => designs.find((d) => d.id === id)?.name ?? id).join(" + ");
 
 /** Combinaciones distintas de diseños y en qué uñas está cada una */

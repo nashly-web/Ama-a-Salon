@@ -7,7 +7,7 @@ const sparkles = [
   { top: "74%", left: "78%", size: "text-5xl" },
 ];
 
-export function Confirmacion({ quote, whatsappText, onNew }: { quote: string; whatsappText: string; onNew: () => void }) {
+export function Confirmacion({ whatsappText, onNew }: { whatsappText: string; onNew: () => void }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-soft px-6 py-16">
       {sparkles.map((s, i) => (
@@ -18,8 +18,7 @@ export function Confirmacion({ quote, whatsappText, onNew }: { quote: string; wh
           <Check className="h-8 w-8" />
         </div>
         <h1 className="mt-4 text-5xl text-primary">¡Solicitud enviada!</h1>
-        <p className="mt-2 text-sm">Tu número de solicitud es</p>
-        <div className="mt-4 rounded-2xl bg-secondary py-3 font-display text-4xl">Cliente #{quote}</div>
+        <div className="mt-4 rounded-2xl bg-secondary py-3 font-display text-4xl">Cotización</div>
         <p className="mt-4 text-xs text-muted-foreground">La manicurista revisará tu cotización y podría confirmarla o ajustarla. Te contactaremos al teléfono que indicaste.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <a href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-soft">

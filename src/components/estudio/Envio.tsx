@@ -7,7 +7,7 @@ export const emptyDatos: Datos = { nombre: "", telefono: "", modalidad: "salon",
 
 const input = "mt-1 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30";
 
-export function Envio({ total, quote, datos, setDatos, onSend }: { total: number; quote: string; datos: Datos; setDatos: (d: Datos) => void; onSend: () => void }) {
+export function Envio({ total, datos, setDatos, onSend }: { total: number; datos: Datos; setDatos: (d: Datos) => void; onSend: () => void }) {
   const [error, setError] = useState("");
   const set = <K extends keyof Datos>(k: K, v: Datos[K]) => setDatos({ ...datos, [k]: v });
   const domicilio = datos.modalidad === "domicilio";
@@ -41,7 +41,7 @@ export function Envio({ total, quote, datos, setDatos, onSend }: { total: number
       </form>
 
       <aside className="h-fit rounded-3xl border border-border bg-secondary p-6 shadow-soft">
-        <p className="text-lg font-semibold">Cotización #{quote}</p>
+        <p className="text-lg font-semibold">Cotización</p>
         <div className="mt-3 space-y-2 text-sm text-muted-foreground">
           <div className="flex justify-between"><span>Set estimado</span><span>{rd(total)}</span></div>
           <div className="flex justify-between"><span>Cargo a domicilio</span><span>{domicilio ? "Por confirmar" : "No aplica"}</span></div>

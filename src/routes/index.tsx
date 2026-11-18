@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import hands from "@/assets/hands.jpg";
 import { SiteHeader } from "@/components/SiteHeader";
+import { ScanLine } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,11 +28,13 @@ function Index() {
             ¡Bienvenida a <span className="bg-[linear-gradient(transparent_60%,var(--highlight)_60%)]">Amaïa</span>!
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">Diseña las uñas que deseas y descubre cuánto costaría tu próximo set.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/estudio" className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft transition hover:opacity-90">Comenzar a diseñar ✦</Link>
+          <div className="mt-8 flex flex-col items-start gap-3">
             <Link to="/servicios" className="rounded-full border border-primary px-7 py-3 font-medium text-primary transition hover:bg-secondary">Ver servicios y precios</Link>
+            <Link to="/escaner" className="inline-flex items-center gap-2 rounded-full bg-accent px-7 py-3 font-medium text-accent-foreground shadow-soft transition hover:-translate-y-0.5">
+              <ScanLine className="h-5 w-5" aria-hidden /> Comenzar a escanear
+            </Link>
+            <Link to="/estudio" className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft transition hover:opacity-90">Comenzar a diseñar ✦</Link>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Elige · Combina · Cotiza, en solo unos minutos</p>
         </section>
         <img src={hands} alt="Manos con uñas en tonos pastel" width={1024} height={1024} className="w-full rounded-3xl shadow-soft" />
       </main>

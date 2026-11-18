@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { BackButton } from "@/components/BackButton";
 import { nailImg, lengthImg } from "@/lib/nail-images";
-import { systems, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, toggleDesign, addDesign, removeDesign, designCombos, fingerName, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
+import { systems, selectSystem, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, addDesign, removeDesign, designCombos, fingerName, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
 import { Photo, Title } from "@/components/estudio/parts";
 import { Disenos } from "@/components/estudio/Disenos";
 import { Resumen, priceRows } from "@/components/estudio/Resumen";
 import { Envio, emptyDatos, type Datos } from "@/components/estudio/Envio";
 import { Confirmacion } from "@/components/estudio/Confirmacion";
+import { takeHandoff } from "@/lib/scan";
+import { STEPS, canReach, missingBefore } from "@/lib/estudio-steps";
 
 export const Route = createFileRoute("/estudio")({
   head: () => ({
@@ -31,22 +33,23 @@ function Card({ active, onClick, children }: { active?: boolean; onClick?: () =>
   );
 }
 
-const steps = ["Sistema", "Largo", "Forma", "Acabados", "Diseños", "Resumen", "Envío"];
-const QUOTE_KEY = "amaia-cotizaciones";
-
 function Estudio() {
   const [step, setStep] = useState(0);
   const [set, setSet] = useState<NailSet>(emptySet);
   const [fingers, setFingersState] = useState(emptyFingers);
   const [datos, setDatos] = useState<Datos>(emptyDatos);
   const [sent, setSent] = useState(false);
-  const [count, setCount] = useState(0);
-  useEffect(() => { setCount(Number(localStorage.getItem(QUOTE_KEY) ?? 0) || 0); }, []);
-  const quote = String(count + 1).padStart(3, "0");
+  const [fromScan, setFromScan] = useState(false);
+  // Diseño que llega desde el escáner: se abre directo en el Resumen.
+  useEffect(() => {
+    const scanned = takeHandoff();
+    if (scanned) { setSet(scanned.set); setFingersState(scanned.fingers); setFromScan(true); setStep(5); }
+  }, []);
 
   const total = totalPrice(set);
   const items = set.systems.length + (set.retiro && retiroPrice(set) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
-  const canNext = step === 0 ? set.systems.length > 0 : step === 2 ? !!set.shape : true;
+  const canNext = canReach(step + 1, set);
+  const missing = missingBefore(step + 1, set).map((i) => (i === 0 ? "tu sistema" : "la forma")).join(" y ");
 
   const setFingers = (f: Fingers) => {
     setFingersState(f);
@@ -54,18 +57,13 @@ function Estudio() {
   };
   const plus = (id: string) => setFingers(addDesign(fingers, id));
   const minus = (id: string) => setFingers(removeDesign(fingers, id));
-  const tap = (i: number, id: string | null) => { if (id) setFingers(toggleDesign(fingers, i, id)); };
 
-  const send = () => {
-    localStorage.setItem(QUOTE_KEY, String(count + 1));
-    setSent(true);
-  };
+  const send = () => setSent(true);
   const reset = () => {
-    setCount((c) => c + 1);
-    setSet(emptySet); setFingersState(emptyFingers()); setDatos(emptyDatos); setSent(false); setStep(0);
+    setSet(emptySet); setFingersState(emptyFingers()); setDatos(emptyDatos); setSent(false); setFromScan(false); setStep(0);
   };
 
-  if (sent) return <Confirmacion quote={quote} whatsappText={whatsappText(set, fingers, datos, total, quote)} onNew={reset} />;
+  if (sent) return <Confirmacion whatsappText={whatsappText(set, fingers, datos, total, fromScan)} onNew={reset} />;
 
   const wide = step >= 4;
   const back = step === 5 ? "◂ Editar set" : step === 6 ? "◂ Volver al resumen" : "◂ Volver";
@@ -75,33 +73,37 @@ function Estudio() {
       <header className="bg-secondary">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Link to="/" className="mr-3 font-display text-3xl">Amaïa</Link>
-            {steps.map((s, i) => (
-              <button key={s} onClick={() => setStep(i)} className={`rounded-full px-3 py-1.5 text-sm ${i === step ? "bg-primary text-primary-foreground" : "bg-card"}`}>{s}</button>
-            ))}
+            <BackButton />
+            <span className="mr-3 font-display text-3xl">Amaïa</span>
+            {STEPS.map((s, i) => {
+              const locked = !canReach(i, set);
+              return (
+                <button key={s} onClick={() => setStep(i)} disabled={locked} title={locked ? `Primero elige: ${missingBefore(i, set).map((k) => STEPS[k]).join(" y ")}` : undefined} className={`rounded-full px-3 py-1.5 text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${i === step ? "bg-primary text-primary-foreground" : "bg-card"}`}>{s}</button>
+              );
+            })}
           </div>
           <div className="flex shrink-0 items-center gap-3 rounded-full bg-card py-1.5 pl-4 pr-1.5 shadow-soft">
-            <div className="text-xs"><p className="font-semibold">Cotización #{quote}</p><p className="text-muted-foreground">{items} elementos</p></div>
+            <div className="text-xs"><p className="font-semibold">Cotización</p><p className="text-muted-foreground">{items} elementos</p></div>
             <span className="rounded-full bg-primary px-4 py-2 font-display text-xl text-primary-foreground">{rd(total)}</span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
+      <main className="mx-auto max-w-6xl px-6 pb-32 pt-8">
         <div className={wide ? "" : "grid gap-8 lg:grid-cols-[1fr_280px]"}>
           <section>
             {step === 0 && (<>
-              <Title t="Elige tu sistema" s="La base de tu set. Puedes elegir uno o varios; se suman al total. El precio varía según el largo." />
+              <Title t="Elige tu sistema" s="La base de tu set. Elige solo uno. El precio varía según el largo." />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 {systems.map((x) => {
                   const on = set.systems.includes(x.id);
                   return (
-                    <Card key={x.id} active={on} onClick={() => setSet((s) => ({ ...s, systems: on ? s.systems.filter((id) => id !== x.id) : [...s.systems, x.id] }))}>
+                    <Card key={x.id} active={on} onClick={() => setSet((s) => ({ ...s, systems: selectSystem(x.id) }))}>
                       <Photo src={nailImg("system", x.id)} alt={x.name} />
                       <p className="font-display text-2xl">{x.name}</p>
                       <p className="text-sm text-muted-foreground">Desde {rd(x.prices[0])}</p>
                       {x.list && <p className="text-xs text-muted-foreground">Precio de lista {rd(x.list)}</p>}
-                      <p className="mt-2 text-xs font-medium text-primary">{on ? "✓ Añadido" : "+ Añadir"}</p>
+                      <p className="mt-2 text-xs font-medium text-primary">{on ? "✓ Elegido" : "Elegir"}</p>
                     </Card>
                   );
                 })}
@@ -149,9 +151,9 @@ function Estudio() {
                 })}
               </div>
             </>)}
-            {step === 4 && <Disenos set={set} fingers={fingers} onPlus={plus} onMinus={minus} onTap={tap} onMore={() => setStep(3)} />}
-            {step === 5 && <Resumen set={set} fingers={fingers} total={total} quote={quote} />}
-            {step === 6 && <Envio total={total} quote={quote} datos={datos} setDatos={setDatos} onSend={send} />}
+            {step === 4 && <Disenos set={set} onPlus={plus} onMinus={minus} />}
+            {step === 5 && <Resumen set={set} total={total} />}
+            {step === 6 && <Envio total={total} datos={datos} setDatos={setDatos} onSend={send} />}
           </section>
 
           {!wide && (
@@ -160,25 +162,32 @@ function Estudio() {
             </aside>
           )}
         </div>
-
-        <div className="mt-10 flex items-center justify-between">
-          <button onClick={() => setStep(Math.max(0, step - 1))} className="rounded-full bg-secondary px-6 py-3 font-medium text-secondary-foreground shadow-soft transition hover:bg-accent disabled:opacity-30" disabled={step === 0}>{back}</button>
-          {step < 5 && <button disabled={!canNext} onClick={() => setStep(step + 1)} className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft disabled:opacity-40">Siguiente ▸</button>}
-          {step === 5 && <button disabled={!set.systems.length} onClick={() => setStep(6)} className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft disabled:opacity-40">Continuar con mis datos ▸</button>}
-          {step === 6 && <button type="submit" form="envio-form" disabled={!set.systems.length} className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft disabled:opacity-40">Enviar mi cotización ✦</button>}
-        </div>
-        {step >= 5 && !set.systems.length && <p className="mt-2 text-right text-xs text-muted-foreground">Elige un sistema primero para poder continuar.</p>}
       </main>
+
+      {/* Navegación flotante: Volver y Siguiente siempre a la vista */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto max-w-6xl">
+          {!canNext && missing && (
+            <p className="mb-2 text-right text-xs font-medium text-primary">Elige {missing} para continuar.</p>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="pointer-events-auto rounded-full bg-secondary px-6 py-3 font-medium text-secondary-foreground shadow-glow ring-1 ring-border backdrop-blur transition hover:bg-accent disabled:invisible">{back}</button>
+            {step < 5 && <button disabled={!canNext} onClick={() => setStep(step + 1)} className="pointer-events-auto rounded-full bg-gradient-cta px-7 py-3 font-medium text-primary-foreground shadow-glow transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0">Siguiente ▸</button>}
+            {step === 5 && <button disabled={!canNext} onClick={() => setStep(6)} className="pointer-events-auto rounded-full bg-gradient-cta px-7 py-3 font-medium text-primary-foreground shadow-glow transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0">Continuar con mis datos ▸</button>}
+            {step === 6 && <button type="submit" form="envio-form" disabled={!canReach(6, set)} className="pointer-events-auto rounded-full bg-gradient-cta px-7 py-3 font-medium text-primary-foreground shadow-glow transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0">Enviar mi cotización ✦</button>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function whatsappText(set: NailSet, fingers: Fingers, d: Datos, total: number, quote: string) {
+function whatsappText(set: NailSet, fingers: Fingers, d: Datos, total: number, fromScan: boolean) {
   const combos = designCombos(fingers);
   const lines = [
-    `Hola Amaïa, soy ${d.nombre}. Esta es mi cotización Cliente #${quote}:`,
+    `Hola Amaïa, soy ${d.nombre}. Esta es mi cotización:`,
     ...priceRows(set).map((r) => `• ${r.label}: ${r.price ? rd(r.price) : "Incluido"}`),
-    ...(combos.length ? ["Diseños por uña:", ...combos.map((c) => `  – ${c.name} (${c.fingers.map(fingerName).join(", ")})`)] : []),
+    ...(fromScan && combos.length ? ["Diseños por uña:", ...combos.map((c) => `  – ${c.name} (${c.fingers.map(fingerName).join(", ")})`)] : []),
     `Total estimado: ${rd(total)}`,
     `Modalidad: ${d.modalidad === "domicilio" ? `A domicilio (${d.direccion})` : "En el salón"}`,
   ];
@@ -193,6 +202,7 @@ function Preview({ set, step }: { set: NailSet; step: number }) {
   const l = lengths.find((x) => x.id === set.length);
   const sh = shapes.find((x) => x.id === set.shape);
   const sys = chosenSystems(set);
+  const fin = set.finishes.map((id) => finishes.find((x) => x.id === id)).filter((x) => !!x);
   return (
     <div className="sticky top-4 overflow-hidden rounded-3xl bg-secondary shadow-soft">
       <img src={src} alt="Vista previa de tus uñas" width={640} height={640} className="aspect-square w-full object-cover" />
@@ -201,6 +211,7 @@ function Preview({ set, step }: { set: NailSet; step: number }) {
           {sys.map((x) => <span key={x.id} className="rounded-full bg-card px-3 py-1">{x.name}</span>)}
           <span className="rounded-full bg-card px-3 py-1">Largo #{set.length} · {l?.name}</span>
           {sh && <span className="rounded-full bg-card px-3 py-1">{sh.name}</span>}
+          {fin.map((x) => <span key={x.id} className="rounded-full bg-card px-3 py-1">{x.name}</span>)}
         </div>
         <p className="text-xs text-muted-foreground">Vista previa aproximada, no es el resultado exacto</p>
       </div>

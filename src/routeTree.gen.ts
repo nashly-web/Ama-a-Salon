@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EscanerRouteImport } from './routes/escaner'
 import { Route as EstudioRouteImport } from './routes/estudio'
 import { Route as ServiciosRouteImport } from './routes/servicios'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EscanerRoute = EscanerRouteImport.update({
+  id: '/escaner',
+  path: '/escaner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EstudioRoute = EstudioRouteImport.update({
@@ -31,30 +37,34 @@ const ServiciosRoute = ServiciosRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/escaner': typeof EscanerRoute
   '/estudio': typeof EstudioRoute
   '/servicios': typeof ServiciosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/escaner': typeof EscanerRoute
   '/estudio': typeof EstudioRoute
   '/servicios': typeof ServiciosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/escaner': typeof EscanerRoute
   '/estudio': typeof EstudioRoute
   '/servicios': typeof ServiciosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/estudio' | '/servicios'
+  fullPaths: '/' | '/escaner' | '/estudio' | '/servicios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/estudio' | '/servicios'
-  id: '__root__' | '/' | '/estudio' | '/servicios'
+  to: '/' | '/escaner' | '/estudio' | '/servicios'
+  id: '__root__' | '/' | '/escaner' | '/estudio' | '/servicios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EscanerRoute: typeof EscanerRoute
   EstudioRoute: typeof EstudioRoute
   ServiciosRoute: typeof ServiciosRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/escaner': {
+      id: '/escaner'
+      path: '/escaner'
+      fullPath: '/escaner'
+      preLoaderRoute: typeof EscanerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/estudio': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EscanerRoute: EscanerRoute,
   EstudioRoute: EstudioRoute,
   ServiciosRoute: ServiciosRoute,
 }
