@@ -36,3 +36,4 @@ use the editor.
 - Scanner AI calls live in `src/lib/scan.server.ts` behind the `scanNails` server function; photos stay in memory and only the resulting design passes to the Estudio via sessionStorage, so no image is ever stored.
 - Nail systems are mutually exclusive: every system pick goes through `selectSystem` in `src/lib/nails.ts`, so the Estudio, the scanner and the handoff never hold two systems.
 - Estudio step access goes through `canReach` in `src/lib/estudio-steps.ts` (only Sistema and Forma are required), so the step pills, Siguiente and the send button share one rule.
+- Quote sending uses free WhatsApp share links built in `src/lib/whatsapp.ts` (`api.whatsapp.com/send`, not wa.me, whose redirect breaks emojis), addressed to the phone typed in the Envío form, so no paid API or stored messages are needed.

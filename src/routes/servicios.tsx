@@ -20,7 +20,10 @@ export const Route = createFileRoute("/servicios")({
 function Servicios() {
   return (
     <div className="min-h-screen">
-      <SiteHeader back />
+      <SiteHeader
+        back
+        action={<Link to="/estudio" className="inline-block whitespace-nowrap rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-soft transition hover:-translate-y-0.5 sm:px-7 sm:py-3 sm:text-base">Diseña tus uñas ✦</Link>}
+      />
       <main className="mx-auto max-w-6xl px-6 pb-16">
         <h1 className="text-5xl text-primary">Servicios y precios</h1>
         <p className="mt-2 text-muted-foreground">Todo lo que ofrecemos, en un solo lugar.</p>
@@ -42,7 +45,6 @@ function Servicios() {
             </section>
           ))}
         </div>
-        <div className="mt-10 text-center"><Link to="/estudio" className="rounded-full bg-primary px-7 py-3 font-medium text-primary-foreground shadow-soft">Diseña tus uñas ✦</Link></div>
       </main>
     </div>
   );

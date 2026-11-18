@@ -2,14 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BackButton } from "@/components/BackButton";
 import { nailImg, lengthImg } from "@/lib/nail-images";
-import { systems, selectSystem, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, addDesign, removeDesign, designCombos, fingerName, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
+import { systems, selectSystem, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, addDesign, removeDesign, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
 import { Photo, Title } from "@/components/estudio/parts";
 import { Disenos } from "@/components/estudio/Disenos";
-import { Resumen, priceRows } from "@/components/estudio/Resumen";
+import { Resumen } from "@/components/estudio/Resumen";
 import { Envio, emptyDatos, type Datos } from "@/components/estudio/Envio";
 import { Confirmacion } from "@/components/estudio/Confirmacion";
 import { takeHandoff } from "@/lib/scan";
 import { STEPS, canReach, missingBefore } from "@/lib/estudio-steps";
+import { quoteMessage, whatsappLink } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/estudio")({
   head: () => ({
@@ -39,7 +40,7 @@ function Estudio() {
   const [fingers, setFingersState] = useState(emptyFingers);
   const [datos, setDatos] = useState<Datos>(emptyDatos);
   const [sent, setSent] = useState(false);
-  const [fromScan, setFromScan] = useState(false);
+  const [, setFromScan] = useState(false);
   // Diseño que llega desde el escáner: se abre directo en el Resumen.
   useEffect(() => {
     const scanned = takeHandoff();
@@ -58,12 +59,17 @@ function Estudio() {
   const plus = (id: string) => setFingers(addDesign(fingers, id));
   const minus = (id: string) => setFingers(removeDesign(fingers, id));
 
-  const send = () => setSent(true);
+  const waLink = whatsappLink(quoteMessage(set, fingers, datos, total), datos.telefono);
+  // Abre WhatsApp con la cotización dirigida al teléfono del formulario (enlace gratuito, sin API de pago).
+  const send = () => {
+    window.open(waLink, "_blank", "noopener,noreferrer");
+    setSent(true);
+  };
   const reset = () => {
     setSet(emptySet); setFingersState(emptyFingers()); setDatos(emptyDatos); setSent(false); setFromScan(false); setStep(0);
   };
 
-  if (sent) return <Confirmacion whatsappText={whatsappText(set, fingers, datos, total, fromScan)} onNew={reset} />;
+  if (sent) return <Confirmacion whatsappLink={waLink} onNew={reset} />;
 
   const wide = step >= 4;
   const back = step === 5 ? "◂ Editar set" : step === 6 ? "◂ Volver al resumen" : "◂ Volver";
@@ -180,21 +186,6 @@ function Estudio() {
       </div>
     </div>
   );
-}
-
-function whatsappText(set: NailSet, fingers: Fingers, d: Datos, total: number, fromScan: boolean) {
-  const combos = designCombos(fingers);
-  const lines = [
-    `Hola Amaïa, soy ${d.nombre}. Esta es mi cotización:`,
-    ...priceRows(set).map((r) => `• ${r.label}: ${r.price ? rd(r.price) : "Incluido"}`),
-    ...(fromScan && combos.length ? ["Diseños por uña:", ...combos.map((c) => `  – ${c.name} (${c.fingers.map(fingerName).join(", ")})`)] : []),
-    `Total estimado: ${rd(total)}`,
-    `Modalidad: ${d.modalidad === "domicilio" ? `A domicilio (${d.direccion})` : "En el salón"}`,
-  ];
-  if (d.fecha) lines.push(`Fecha deseada: ${d.fecha}`);
-  if (d.notas) lines.push(`Observaciones: ${d.notas}`);
-  lines.push(`Teléfono: ${d.telefono}`);
-  return lines.join("\n");
 }
 
 function Preview({ set, step }: { set: NailSet; step: number }) {
