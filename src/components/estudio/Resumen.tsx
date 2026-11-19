@@ -9,7 +9,8 @@ export function priceRows(set: NailSet) {
     const retoque = !!set.retoque && s.retoque != null;
     rows.push({ label: retoque ? `Retoque ${s.name}` : `${s.name} (largo ${size})`, price: systemLinePrice(s, set) });
   }
-  if (sh) rows.push({ label: `Forma ${sh.name}`, price: sh.price });
+  // Las formas no tienen recargo: solo se muestra una línea si alguna llegara a tener precio
+  if (sh?.price) rows.push({ label: `Forma ${sh.name}`, price: sh.price });
   if (retiroPrice(set)) rows.push({ label: `Retiro ${chosenSystems(set).filter((s) => s.retiro).map((s) => s.name).join(" + ")}`, price: retiroPrice(set) });
   const fs = set.finishes.map((f) => finishes.find((x) => x.id === f)!).filter(Boolean);
   if (fs.length) rows.push({ label: `Acabados: ${fs.map((f) => f.name).join(", ")}`, price: fs.reduce((a, f) => a + f.price, 0) });

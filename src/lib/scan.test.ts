@@ -22,19 +22,19 @@ describe("escáner: mapeo al catálogo", () => {
     expect(r.detectedElements[0]!.mappedId).toBeNull();
   });
 
-  it("cat eye + french en 2 uñas, Builder Gel largo #3: 1350 + 500 + 2×20 = 1890", () => {
+  it("cat eye + french en 2 uñas, Builder Gel largo #3: 1350 + 500 + 2×200 = 2250", () => {
     const fingers = Array.from({ length: 10 }, (_, i) => (i === 1 || i === 8 ? ["french"] : []));
     const r = sanitizeScan({ ...base, shape: "almendrada", finishes: ["cateye"], designsPerFinger: fingers })!;
     const { set } = scanToState(r, { systems: ["builder-gel"], length: 3 });
     expect(set.designs).toEqual({ french: 2 });
-    expect(totalPrice(set)).toBe(1890);
+    expect(totalPrice(set)).toBe(2250);
   });
 
-  it("el total del escáner es exactamente el de totalPrice (stiletto suma su recargo)", () => {
+  it("el total del escáner es exactamente el de totalPrice (stiletto sin recargo)", () => {
     const r = sanitizeScan({ ...base, shape: "stiletto", lengthEstimate: 5, finishes: ["chrome", "matte"], designsPerFinger: Array(10).fill(["sencillo"]) })!;
     const { set } = scanToState(r, { systems: ["soft-gel"], length: r.lengthEstimate! });
-    // Soft gel L 1200 + stiletto 1000 + espejo 500 + matte 200 + nailart simple en las 10 uñas 200
-    expect(totalPrice(set)).toBe(3100);
+    // Soft gel L 1200 + stiletto 0 + espejo 500 + matte 200 + nailart simple 200 × 10 uñas = 2000
+    expect(totalPrice(set)).toBe(3900);
   });
 
   it("respuesta con formato incorrecto se rechaza", () => {

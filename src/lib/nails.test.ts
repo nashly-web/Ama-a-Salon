@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { totalPrice, systemPrice, emptySet, systemsByPrice, cheapestSystem, selectSystem } from "./nails";
+import { totalPrice, systemPrice, emptySet, shapes, designPerNail, systemsByPrice, cheapestSystem, selectSystem } from "./nails";
 
 describe("cotizador", () => {
   it("Builder Cuccio: S 1,350 · M 1,450 · L 1,500 · SL 1,500", () => {
@@ -11,11 +11,29 @@ describe("cotizador", () => {
   it("Cover liso SL cuesta 1,600", () => {
     expect(systemPrice("cover", 7)).toBe(1600);
   });
-  it("Stiletto suma 1,000", () => {
-    expect(totalPrice({ ...emptySet, systems: ["builder-gel"], length: 1, shape: "stiletto" })).toBe(2300);
+  it("Stiletto no tiene recargo: Builder Gel S con Stiletto sigue en 1,300", () => {
+    expect(totalPrice({ ...emptySet, systems: ["builder-gel"], length: 1, shape: "stiletto" })).toBe(1300);
   });
-  it("Piedras: 150 las 10 uñas → 2 uñas cuestan 30; French fino 200", () => {
-    expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 1, finishes: ["french-fino"], designs: { piedras: 2 } })).toBe(1230);
+  it("Ninguna forma tiene recargo", () => {
+    for (const sh of shapes) expect(sh.price).toBe(0);
+  });
+  it("Uña piedra completa cuesta 150 por uña: 2 uñas = 300; con Soft gel S + French fino = 1,500", () => {
+    expect(totalPrice({ ...emptySet, designs: { piedras: 2 } })).toBe(300);
+    expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 1, finishes: ["french-fino"], designs: { piedras: 2 } })).toBe(1500);
+  });
+  it("Precios por uña: Nailart simple 200, Piedra 150, Elaborado 500, Flores 200, French 200", () => {
+    expect(designPerNail("sencillo")).toBe(200);
+    expect(designPerNail("piedras")).toBe(150);
+    expect(designPerNail("3d")).toBe(500);
+    expect(designPerNail("flores")).toBe(200);
+    expect(designPerNail("french")).toBe(200);
+  });
+  it("El largo cambia el precio del sistema, no se suma encima: Soft gel 1,000 en #1 y 1,100 en #4", () => {
+    expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 1 })).toBe(1000);
+    expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 4 })).toBe(1100);
+  });
+  it("Caso de la captura: Soft gel #4 + Stiletto + French fino + piedra en 2 uñas = 1,600", () => {
+    expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 4, shape: "stiletto", finishes: ["french-fino"], designs: { piedras: 2 } })).toBe(1600);
   });
   it("Builder Gel M con Efecto espejo cuesta 1,850", () => {
     expect(totalPrice({ ...emptySet, systems: ["builder-gel"], length: 3, finishes: ["chrome"] })).toBe(1850);
@@ -26,14 +44,11 @@ describe("cotizador", () => {
   it("Retiro de Soft gel suma 200", () => {
     expect(totalPrice({ ...emptySet, systems: ["soft-gel"], length: 1, retiro: true })).toBe(1200);
   });
-  it("Diseño elaborado en 1 uña cuesta 50 (500 ÷ 10)", () => {
-    expect(totalPrice({ ...emptySet, systems: ["cover"], length: 1, designs: { "3d": 1 } })).toBe(1050);
+  it("Diseño elaborado en 1 uña cuesta 500: Cover S + 1 uña = 1,500", () => {
+    expect(totalPrice({ ...emptySet, systems: ["cover"], length: 1, designs: { "3d": 1 } })).toBe(1500);
   });
-  it("Diseño elaborado en las 10 uñas cuesta 500", () => {
-    expect(totalPrice({ ...emptySet, designs: { "3d": 10 } })).toBe(500);
-  });
-  it("Nailart simple (200) en una sola uña cuesta 20", () => {
-    expect(totalPrice({ ...emptySet, designs: { sencillo: 1 } })).toBe(20);
+  it("Diseño elaborado en las 10 uñas cuesta 5,000", () => {
+    expect(totalPrice({ ...emptySet, designs: { "3d": 10 } })).toBe(5000);
   });
   it("Varios sistemas se suman: Builder Cuccio + Builder Gel en largo #1 = 2,650", () => {
     expect(totalPrice({ ...emptySet, systems: ["builder-cuccio", "builder-gel"], length: 1 })).toBe(2650);

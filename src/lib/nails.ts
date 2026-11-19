@@ -31,7 +31,7 @@ export const shapes: Option[] = [
   { id: "almendrada", name: "Almendrada", price: 0 },
   { id: "coffin", name: "Coffin", price: 0 },
   { id: "ovalada", name: "Ovalada", price: 0 },
-  { id: "stiletto", name: "Stiletto", price: 1000 },
+  { id: "stiletto", name: "Stiletto", price: 0 },
   { id: "redonda", name: "Redonda", price: 0 },
 ];
 
@@ -48,7 +48,7 @@ export const finishes: Option[] = [
   { id: "matte", name: "Matte", price: 200 },
 ];
 
-/** Precio del diseño en las 10 uñas; cada uña cobra la décima parte (ver designPerNail) */
+/** Precio oficial de cada diseño POR UÑA (se multiplica por las uñas que lo llevan) */
 export const designs: Option[] = [
   { id: "sencillo", name: "Nailart simple", price: 200, list: 300 },
   { id: "piedras", name: "Uña piedra completa", price: 150 },
@@ -61,11 +61,11 @@ export const designs: Option[] = [
 export const EXTRA_NAIL_PRICE = 100;
 export const MAX_NAILS = 10;
 
-/** Lo que cuesta un diseño en UNA uña: el precio de las 10 uñas dividido entre 10 */
-export const designPerNail = (id: string) => (designs.find((d) => d.id === id)?.price ?? 0) / MAX_NAILS;
+/** Lo que cuesta un diseño en UNA uña: su precio oficial de la lista */
+export const designPerNail = (id: string) => designs.find((d) => d.id === id)?.price ?? 0;
 
-/** Texto del precio de un diseño: por uña y por las 10 uñas */
-export const designPriceLabel = (d: Option) => `${d.note === "Desde" ? "Desde " : ""}${rd(designPerNail(d.id))} por uña · ${rd(d.price)} las ${MAX_NAILS}`;
+/** Texto del precio de un diseño por uña */
+export const designPriceLabel = (d: Option) => `${d.note === "Desde" ? "Desde " : ""}${rd(designPerNail(d.id))} por uña`;
 
 export type NailSet = {
   /** Sistemas elegidos: se pueden combinar varios y se suman */

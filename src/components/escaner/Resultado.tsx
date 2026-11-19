@@ -108,7 +108,7 @@ export function Resultado({ scan, image, q, onChange, onUse }: Props) {
           )}
         </Section>
 
-        <Section title="Diseños por uña" hint="El precio del diseño es por las 10 uñas; cada uña paga su parte. Podrás elegir en qué dedos van en el Estudio.">          <ul className="divide-y divide-border">
+        <Section title="Diseños por uña" hint="Cada diseño se cobra por uña. Podrás elegir en qué dedos van en el Estudio.">          <ul className="divide-y divide-border">
             {designs.map((d) => {
               const n = state.set.designs[d.id] ?? 0;
               return (
