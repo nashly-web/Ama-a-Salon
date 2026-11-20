@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BackButton } from "@/components/BackButton";
 import { nailImg, lengthImg } from "@/lib/nail-images";
-import { systems, selectSystem, lengths, shapes, finishes, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, addDesign, removeDesign, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
+import { systems, selectSystem, lengths, shapes, finishes, designs, emptySet, totalPrice, systemPrice, retiroPrice, chosenSystems, emptyFingers, countDesigns, addDesign, removeDesign, rd, type NailSet, type Option, type Fingers } from "@/lib/nails";
 import { Photo, Title } from "@/components/estudio/parts";
 import { Disenos } from "@/components/estudio/Disenos";
 import { Resumen } from "@/components/estudio/Resumen";
@@ -11,6 +11,8 @@ import { Confirmacion } from "@/components/estudio/Confirmacion";
 import { takeHandoff } from "@/lib/scan";
 import { STEPS, canReach, missingBefore } from "@/lib/estudio-steps";
 import { quoteMessage, whatsappLink } from "@/lib/whatsapp";
+import { hasOdooProduct, odooName, odooPrice, useOdooCatalog, type OdooCatalog } from "@/lib/odoo-catalog";
+import { OdooConnection } from "@/components/OdooConnection";
 
 export const Route = createFileRoute("/estudio")({
   head: () => ({
@@ -35,6 +37,7 @@ function Card({ active, onClick, children }: { active?: boolean; onClick?: () =>
 }
 
 function Estudio() {
+  const catalogQuery = useOdooCatalog();
   const [step, setStep] = useState(0);
   const [set, setSet] = useState<NailSet>(emptySet);
   const [fingers, setFingersState] = useState(emptyFingers);
@@ -43,12 +46,20 @@ function Estudio() {
   const [, setFromScan] = useState(false);
   // Diseño que llega desde el escáner: se abre directo en el Resumen.
   useEffect(() => {
+    if (!catalogQuery.data) return;
     const scanned = takeHandoff();
-    if (scanned) { setSet(scanned.set); setFingersState(scanned.fingers); setFromScan(true); setStep(5); }
-  }, []);
+    if (scanned) {
+      const synced = { ...scanned.set, finishes: scanned.set.finishes.filter((id) => hasOdooProduct(catalogQuery.data!, finishes.find((item) => item.id === id)?.odooCode)) };
+      setSet(synced);
+      setFingersState(scanned.fingers.map((ids) => ids.filter((id) => hasOdooProduct(catalogQuery.data!, designs.find((item) => item.id === id)?.odooCode))));
+      setFromScan(true);
+      setStep(5);
+    }
+  }, [catalogQuery.data]);
 
-  const total = totalPrice(set);
-  const items = set.systems.length + (set.retiro && retiroPrice(set) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
+  const catalog = catalogQuery.data;
+  const total = totalPrice(set, catalog);
+  const items = set.systems.length + (set.retiro && catalog && retiroPrice(set, catalog) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
   const canNext = canReach(step + 1, set);
   const missing = missingBefore(step + 1, set).map((i) => (i === 0 ? "tu sistema" : "la forma")).join(" y ");
 
@@ -59,7 +70,7 @@ function Estudio() {
   const plus = (id: string) => setFingers(addDesign(fingers, id));
   const minus = (id: string) => setFingers(removeDesign(fingers, id));
 
-  const waLink = whatsappLink(quoteMessage(set, fingers, datos, total), datos.telefono);
+  const waLink = whatsappLink(quoteMessage(set, fingers, datos, total, catalog), datos.telefono);
   // Abre WhatsApp con la cotización dirigida al teléfono del formulario (enlace gratuito, sin API de pago).
   const send = () => {
     window.open(waLink, "_blank", "noopener,noreferrer");
@@ -69,6 +80,7 @@ function Estudio() {
     setSet(emptySet); setFingersState(emptyFingers()); setDatos(emptyDatos); setSent(false); setFromScan(false); setStep(0);
   };
 
+  if (catalogQuery.isLoading || !catalog) return <OdooConnection loading={catalogQuery.isLoading} error={catalogQuery.error} onRetry={() => void catalogQuery.refetch()} />;
   if (sent) return <Confirmacion whatsappLink={waLink} onNew={reset} />;
 
   const wide = step >= 4;
@@ -101,20 +113,19 @@ function Estudio() {
             {step === 0 && (<>
               <Title t="Elige tu sistema" s="La base de tu set. Elige solo uno. El precio varía según el largo." />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                {systems.map((x) => {
+                {systems.filter((x) => hasOdooProduct(catalog, x.odooCode)).map((x) => {
                   const on = set.systems.includes(x.id);
                   return (
                     <Card key={x.id} active={on} onClick={() => setSet((s) => ({ ...s, systems: selectSystem(x.id) }))}>
                       <Photo src={nailImg("system", x.id)} alt={x.name} />
-                      <p className="font-display text-2xl">{x.name}</p>
-                      <p className="text-sm text-muted-foreground">Desde {rd(x.prices[0])}</p>
-                      {x.list && <p className="text-xs text-muted-foreground">Precio de lista {rd(x.list)}</p>}
+                      <p className="font-display text-2xl">{odooName(catalog, x.odooCode, x.name)}</p>
+                      <p className="text-sm text-muted-foreground">Desde {rd(systemPrice(x.id, 1, catalog))}</p>
                       <p className="mt-2 text-xs font-medium text-primary">{on ? "✓ Elegido" : "Elegir"}</p>
                     </Card>
                   );
                 })}
               </div>
-              <Mantenimiento set={set} setSet={setSet} />
+              <Mantenimiento set={set} setSet={setSet} catalog={catalog} />
             </>)}
             {step === 1 && (<>
               <Title t="Elige el largo" s={set.retoque ? "Estás cotizando un retoque: el precio no cambia con el largo." : "Cada 2 largos es un tamaño: S, M, L y SL. El precio cambia según el tamaño."} />
@@ -124,7 +135,7 @@ function Estudio() {
                     <Photo src={lengthImg(l.id)} alt={`Uñas largo ${l.name}`} />
                     <p className="mt-2 font-semibold">#{l.id}</p>
                     <p className="text-xs text-muted-foreground">{l.name} · {l.size}</p>
-                    {set.systems.length > 0 && !set.retoque && <p className="text-xs text-primary">{rd(set.systems.reduce((a, id) => a + systemPrice(id, l.id), 0))}</p>}
+                    {set.systems.length > 0 && !set.retoque && <p className="text-xs text-primary">{rd(set.systems.reduce((a, id) => a + systemPrice(id, l.id, catalog), 0))}</p>}
                   </Card>
                 ))}
               </div>
@@ -135,8 +146,8 @@ function Estudio() {
                 {shapes.map((x) => (
                   <Card key={x.id} active={set.shape === x.id} onClick={() => setSet({ ...set, shape: x.id })}>
                     <Photo src={nailImg("shape", x.id)} alt={`Uñas forma ${x.name}`} />
-                    <p className="mt-2 text-center font-display text-2xl">{x.name}</p>
-                    <p className="text-center text-xs text-muted-foreground">{x.price ? `Recargo ${rd(x.price)}` : "Sin recargo"}</p>
+                    <p className="mt-2 text-center font-display text-2xl">{odooName(catalog, x.odooCode, x.name)}</p>
+                    <p className="text-center text-xs text-muted-foreground">{(odooPrice(catalog, x.odooCode) ?? x.price) ? `Recargo ${rd(odooPrice(catalog, x.odooCode) ?? x.price)}` : "Sin recargo"}</p>
                   </Card>
                 ))}
               </div>
@@ -144,27 +155,27 @@ function Estudio() {
             {step === 3 && (<>
               <Title t="Acabados" s="Añade o quita capas y efectos." />
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                {finishes.map((x) => {
+                {finishes.filter((x) => hasOdooProduct(catalog, x.odooCode)).map((x) => {
                   const on = set.finishes.includes(x.id);
                   return (
                     <Card key={x.id} active={on} onClick={() => setSet({ ...set, finishes: on ? set.finishes.filter((f) => f !== x.id) : [...set.finishes, x.id] })}>
                       <Photo src={nailImg("finish", x.id)} alt={x.name} />
-                      <p className="font-display text-xl">{x.name}</p>
-                      <PriceLine o={x} />
+                      <p className="font-display text-xl">{odooName(catalog, x.odooCode, x.name)}</p>
+                      <PriceLine o={x} catalog={catalog} />
                       <p className="mt-2 text-xs font-medium text-primary">{on ? "✓ Añadido" : "+ Añadir"}</p>
                     </Card>
                   );
                 })}
               </div>
             </>)}
-            {step === 4 && <Disenos set={set} onPlus={plus} onMinus={minus} />}
-            {step === 5 && <Resumen set={set} total={total} />}
+            {step === 4 && <Disenos set={set} onPlus={plus} onMinus={minus} catalog={catalog} />}
+            {step === 5 && <Resumen set={set} total={total} catalog={catalog} />}
             {step === 6 && <Envio total={total} datos={datos} setDatos={setDatos} onSend={send} />}
           </section>
 
           {!wide && (
             <aside className="space-y-4">
-              <Preview set={set} step={step} />
+              <Preview set={set} step={step} catalog={catalog} />
             </aside>
           )}
         </div>
@@ -188,12 +199,12 @@ function Estudio() {
   );
 }
 
-function Preview({ set, step }: { set: NailSet; step: number }) {
+function Preview({ set, step, catalog }: { set: NailSet; step: number; catalog: OdooCatalog }) {
   const src = step === 1 || !set.shape ? lengthImg(set.length) : nailImg("shape", set.shape);
   const l = lengths.find((x) => x.id === set.length);
   const sh = shapes.find((x) => x.id === set.shape);
   const sys = chosenSystems(set);
-  const fin = set.finishes.map((id) => finishes.find((x) => x.id === id)).filter((x) => !!x);
+  const fin = set.finishes.map((id) => finishes.find((x) => x.id === id)).filter((x) => !!x && hasOdooProduct(catalog, x.odooCode));
   return (
     <div className="sticky top-4 overflow-hidden rounded-3xl bg-secondary shadow-soft">
       <img src={src} alt="Vista previa de tus uñas" width={640} height={640} className="aspect-square w-full object-cover" />
@@ -201,8 +212,8 @@ function Preview({ set, step }: { set: NailSet; step: number }) {
         <div className="flex flex-wrap gap-2 text-xs">
           {sys.map((x) => <span key={x.id} className="rounded-full bg-card px-3 py-1">{x.name}</span>)}
           <span className="rounded-full bg-card px-3 py-1">Largo #{set.length} · {l?.name}</span>
-          {sh && <span className="rounded-full bg-card px-3 py-1">{sh.name}</span>}
-          {fin.map((x) => <span key={x.id} className="rounded-full bg-card px-3 py-1">{x.name}</span>)}
+          {sh && <span className="rounded-full bg-card px-3 py-1">{odooName(catalog, sh.odooCode, sh.name)}</span>}
+          {fin.map((x) => <span key={x.id} className="rounded-full bg-card px-3 py-1">{odooName(catalog, x.odooCode, x.name)}</span>)}
         </div>
         <p className="text-xs text-muted-foreground">Vista previa aproximada, no es el resultado exacto</p>
       </div>
@@ -210,24 +221,24 @@ function Preview({ set, step }: { set: NailSet; step: number }) {
   );
 }
 
-function PriceLine({ o, suffix = "" }: { o: Option; suffix?: string }) {
+function PriceLine({ o, suffix = "", catalog }: { o: Option; suffix?: string; catalog: OdooCatalog }) {
+  const price = odooPrice(catalog, o.odooCode) ?? 0;
   return (
     <p className="text-sm text-muted-foreground">
-      {o.note === "Desde" ? "Desde " : ""}{rd(o.price)}{suffix}
-      {o.list && <span className="ml-2 text-xs line-through">{rd(o.list)}</span>}
+      {o.note === "Desde" ? "Desde " : ""}{rd(price)}{suffix}
       {o.note && o.note !== "Desde" && <span className="block text-xs">{o.note}</span>}
     </p>
   );
 }
 
-function Mantenimiento({ set, setSet }: { set: NailSet; setSet: (s: NailSet) => void }) {
+function Mantenimiento({ set, setSet, catalog }: { set: NailSet; setSet: (s: NailSet) => void; catalog: OdooCatalog }) {
   const sys = chosenSystems(set);
   if (!sys.length) return null;
-  const conRetoque = sys.filter((x) => x.retoque != null);
-  const conRetiro = sys.filter((x) => x.retiro != null);
-  const sinPrecio = sys.filter((x) => x.retoque == null);
-  const retoque = conRetoque.reduce((a, x) => a + (x.retoque ?? 0), 0);
-  const retiro = conRetiro.reduce((a, x) => a + (x.retiro ?? 0), 0);
+  const conRetoque = sys.filter((x) => hasOdooProduct(catalog, x.retouchCode));
+  const conRetiro = sys.filter((x) => hasOdooProduct(catalog, x.removalCode));
+  const sinPrecio = sys.filter((x) => !hasOdooProduct(catalog, x.retouchCode));
+  const retoque = conRetoque.reduce((a, x) => a + (odooPrice(catalog, x.retouchCode) ?? 0), 0);
+  const retiro = conRetiro.reduce((a, x) => a + (odooPrice(catalog, x.removalCode) ?? 0), 0);
   const pill = (on: boolean) => `rounded-full px-4 py-2 text-sm transition ${on ? "bg-primary text-primary-foreground" : "bg-card"} disabled:opacity-40`;
   return (
     <div className="mt-6 rounded-3xl bg-secondary p-5 shadow-soft">

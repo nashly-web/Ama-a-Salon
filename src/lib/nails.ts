@@ -1,5 +1,7 @@
 // Lista oficial de precios del salón (RD$). `list` = precio de lista (antes).
-export type Option = { id: string; name: string; price: number; list?: number | undefined; note?: string | undefined };
+import { odooName, odooPrice, type OdooCatalog } from "./odoo-catalog";
+
+export type Option = { id: string; name: string; price: number; list?: number | undefined; note?: string | undefined; odooCode?: string | undefined };
 
 export type System = {
   id: string;
@@ -9,15 +11,18 @@ export type System = {
   retoque?: number | undefined;
   retiro?: number | undefined;
   list?: number | undefined;
+  odooCode: string;
+  retouchCode?: string | undefined;
+  removalCode?: string | undefined;
 };
 
 export const systems: System[] = [
-  { id: "builder-cuccio", name: "Builder Cuccio", prices: [1350, 1450, 1500, 1500], retoque: 1200, retiro: 250, list: 1400 },
-  { id: "builder-gel", name: "Builder Gel", prices: [1300, 1350, 1400, 1450], retoque: 1150, retiro: 250, list: 1400 },
-  { id: "soft-gel", name: "Soft gel / Press on", prices: [1000, 1100, 1200, 1250], retoque: 800, retiro: 200, list: 1800 },
-  { id: "cover", name: "Cover liso", prices: [1000, 1200, 1400, 1600], retoque: 900, retiro: 250 },
-  // No aparece en la lista oficial; se mantiene con su precio anterior.
-  { id: "acrigel", name: "Acrigel", prices: [1200, 1300, 1400, 1500] },
+  { id: "builder-cuccio", name: "Builder Cuccio", prices: [1350, 1450, 1500, 1500], retoque: 1200, retiro: 250, list: 1400, odooCode: "NAIL-026", retouchCode: "NAIL-ADD-026-T-S", removalCode: "NAIL-ADD-026-R" },
+  { id: "builder-gel", name: "Builder Gel", prices: [1300, 1350, 1400, 1450], retoque: 1150, retiro: 250, list: 1400, odooCode: "NAIL-027", retouchCode: "NAIL-ADD-027-T-S", removalCode: "NAIL-ADD-027-R" },
+  { id: "soft-gel", name: "Soft gel / Press on", prices: [1000, 1100, 1200, 1250], retoque: 800, retiro: 200, list: 1800, odooCode: "NAIL-028", retouchCode: "NAIL-ADD-028-T-S", removalCode: "NAIL-ADD-028-R" },
+  { id: "cover", name: "Cover liso", prices: [1000, 1200, 1400, 1600], retoque: 900, retiro: 250, odooCode: "NAIL-029", retouchCode: "NAIL-ADD-029-T-S", removalCode: "NAIL-ADD-029-R" },
+  // Este sistema no está registrado en Odoo; se excluye de los precios sincronizados.
+  { id: "acrigel", name: "Acrigel", prices: [1200, 1300, 1400, 1500], odooCode: "NAIL-025" },
 ];
 
 export const sizes = ["S", "M", "L", "SL"] as const;
@@ -31,41 +36,43 @@ export const shapes: Option[] = [
   { id: "almendrada", name: "Almendrada", price: 0 },
   { id: "coffin", name: "Coffin", price: 0 },
   { id: "ovalada", name: "Ovalada", price: 0 },
-  { id: "stiletto", name: "Stiletto", price: 0 },
+  { id: "stiletto", name: "Stiletto", price: 0, odooCode: "NAIL-039" },
   { id: "redonda", name: "Redonda", price: 0 },
 ];
 
 export const finishes: Option[] = [
-  { id: "gel", name: "Esmaltado después del acrílico", price: 400 },
-  { id: "french-luna", name: "French media luna gel", price: 300, list: 500 },
-  { id: "french-fino", name: "French fino recto", price: 200, list: 400 },
-  { id: "chrome", name: "Efecto espejo", price: 500 },
-  { id: "cristal", name: "Cristal", price: 700 },
-  { id: "babyboomer", name: "Baby Boomer", price: 1300 },
-  { id: "efectos", name: "Efectos mano completa", price: 600, note: "Precio aproximado" },
-  // No aparecen en la lista oficial; se mantienen con su precio anterior.
-  { id: "cateye", name: "Cat eye", price: 500 },
-  { id: "matte", name: "Matte", price: 200 },
+  { id: "gel", name: "Esmaltado después del acrílico", price: 400, odooCode: "NAIL-041" },
+  { id: "french-luna", name: "French media luna gel", price: 300, list: 500, odooCode: "NAIL-032" },
+  { id: "french-fino", name: "French fino recto", price: 200, list: 400, odooCode: "NAIL-033" },
+  { id: "chrome", name: "Efecto espejo", price: 500, odooCode: "NAIL-038" },
+  { id: "cristal", name: "Cristal", price: 700, odooCode: "NAIL-040" },
+  { id: "babyboomer", name: "Baby Boomer", price: 1300, odooCode: "NAIL-042" },
+  { id: "efectos", name: "Efectos mano completa", price: 600, note: "Precio aproximado", odooCode: "NAIL-035" },
+  { id: "cateye", name: "Cat eye", price: 500, odooCode: "NAIL-043" },
+  { id: "matte", name: "Matte", price: 200, odooCode: "NAIL-044" },
 ];
 
 /** Precio oficial de cada diseño POR UÑA (se multiplica por las uñas que lo llevan) */
 export const designs: Option[] = [
-  { id: "sencillo", name: "Nailart simple", price: 200, list: 300 },
-  { id: "piedras", name: "Uña piedra completa", price: 150 },
-  { id: "3d", name: "Diseño elaborado", price: 500, note: "Desde" },
-  // No aparecen en la lista oficial; se mantienen con su precio anterior.
-  { id: "flores", name: "Flores", price: 200 },
-  { id: "french", name: "French", price: 200 },
+  { id: "sencillo", name: "Nailart simple", price: 200, list: 300, odooCode: "NAIL-034" },
+  { id: "piedras", name: "Uña piedra completa", price: 150, odooCode: "NAIL-037" },
+  { id: "3d", name: "Diseño elaborado", price: 500, note: "Desde", odooCode: "NAIL-036" },
+  { id: "flores", name: "Flores", price: 200, odooCode: "NAIL-045" },
+  { id: "french", name: "French", price: 200, odooCode: "NAIL-033" },
 ];
 
 export const EXTRA_NAIL_PRICE = 100;
 export const MAX_NAILS = 10;
 
 /** Lo que cuesta un diseño en UNA uña: su precio oficial de la lista */
-export const designPerNail = (id: string) => designs.find((d) => d.id === id)?.price ?? 0;
+export const designPerNail = (id: string, catalog?: OdooCatalog) => {
+  const design = designs.find((d) => d.id === id);
+  if (!design) return 0;
+  return catalog ? (odooPrice(catalog, design.odooCode) ?? 0) : design.price;
+};
 
 /** Texto del precio de un diseño por uña */
-export const designPriceLabel = (d: Option) => `${d.note === "Desde" ? "Desde " : ""}${rd(designPerNail(d.id))} por uña`;
+export const designPriceLabel = (d: Option, catalog?: OdooCatalog) => `${d.note === "Desde" ? "Desde " : ""}${rd(designPerNail(d.id, catalog))} por uña`;
 
 export type NailSet = {
   /** Sistemas elegidos: se pueden combinar varios y se suman */
@@ -86,18 +93,21 @@ export function sizeOf(length: number) {
   return sizes[Math.floor((length - 1) / 2)] ?? "S";
 }
 
-export function systemPrice(systemId: string | null, length: number) {
+export function systemPrice(systemId: string | null, length: number, catalog?: OdooCatalog) {
   const s = systems.find((x) => x.id === systemId);
-  return s?.prices[Math.floor((length - 1) / 2)] ?? 0;
+  if (!s) return 0;
+  if (!catalog) return s.prices[Math.floor((length - 1) / 2)] ?? 0;
+  return odooPrice(catalog, s.odooCode, sizeOf(length)) ?? 0;
 }
 
 /** Sistemas de menor a mayor precio para el largo dado (empates: orden de la lista oficial) */
-export function systemsByPrice(length: number) {
-  return [...systems].sort((a, b) => systemPrice(a.id, length) - systemPrice(b.id, length));
+export function systemsByPrice(length: number, catalog?: OdooCatalog) {
+  const available = catalog ? systems.filter((system) => !!odooPrice(catalog, system.odooCode, "S")) : systems;
+  return [...available].sort((a, b) => systemPrice(a.id, length, catalog) - systemPrice(b.id, length, catalog));
 }
 
 /** El sistema más económico para el largo dado */
-export const cheapestSystem = (length: number) => systemsByPrice(length)[0]!.id;
+export const cheapestSystem = (length: number, catalog?: OdooCatalog) => systemsByPrice(length, catalog)[0]?.id ?? "";
 
 /** Sistemas excluyentes: elegir uno reemplaza al anterior, nunca quedan dos a la vez */
 export const selectSystem = (id: string): string[] => [id];
@@ -108,31 +118,35 @@ export function chosenSystems(set: NailSet) {
 }
 
 /** Precio de un sistema dentro del set: retoque si se eligió y existe, si no según tamaño */
-export function systemLinePrice(s: System, set: NailSet) {
-  if (set.retoque && s.retoque != null) return s.retoque;
-  return systemPrice(s.id, set.length);
+export function systemLinePrice(s: System, set: NailSet, catalog?: OdooCatalog) {
+  if (set.retoque && s.retoque != null) return catalog ? (odooPrice(catalog, s.retouchCode) ?? 0) : s.retoque;
+  return systemPrice(s.id, set.length, catalog);
 }
 
 /** Precio de la base: suma de todos los sistemas elegidos */
-export function basePrice(set: NailSet) {
-  return chosenSystems(set).reduce((a, s) => a + systemLinePrice(s, set), 0);
+export function basePrice(set: NailSet, catalog?: OdooCatalog) {
+  return chosenSystems(set).reduce((a, s) => a + systemLinePrice(s, set, catalog), 0);
 }
 
 /** Retiro de cada sistema elegido que tenga precio de retiro */
-export function retiroPrice(set: NailSet) {
+export function retiroPrice(set: NailSet, catalog?: OdooCatalog) {
   if (!set.retiro) return 0;
-  return chosenSystems(set).reduce((a, s) => a + (s.retiro ?? 0), 0);
+  return chosenSystems(set).reduce((a, s) => a + (catalog ? (odooPrice(catalog, s.removalCode) ?? 0) : (s.retiro ?? 0)), 0);
 }
 
 export function nailsUsed(set: NailSet) {
   return Object.values(set.designs).reduce((a, b) => a + b, 0);
 }
 
-export function totalPrice(set: NailSet) {
-  let t = basePrice(set) + retiroPrice(set);
-  t += shapes.find((s) => s.id === set.shape)?.price ?? 0;
-  for (const f of set.finishes) t += finishes.find((x) => x.id === f)?.price ?? 0;
-  for (const [id, n] of Object.entries(set.designs)) t += designPerNail(id) * n;
+export function totalPrice(set: NailSet, catalog?: OdooCatalog) {
+  let t = basePrice(set, catalog) + retiroPrice(set, catalog);
+  const shape = shapes.find((s) => s.id === set.shape);
+  t += shape ? (catalog ? (odooPrice(catalog, shape.odooCode) ?? shape.price) : shape.price) : 0;
+  for (const f of set.finishes) {
+    const option = finishes.find((x) => x.id === f);
+    t += option ? (catalog ? (odooPrice(catalog, option.odooCode) ?? 0) : option.price) : 0;
+  }
+  for (const [id, n] of Object.entries(set.designs)) t += designPerNail(id, catalog) * n;
   return Math.round(t);
 }
 
@@ -174,11 +188,14 @@ export function removeDesign(f: Fingers, id: string): Fingers {
 /** Uñas con al menos un diseño */
 export const nailsDecorated = (f: Fingers) => f.filter((ids) => ids.length).length;
 
-export const comboPrice = (ids: string[]) => ids.reduce((a, id) => a + designPerNail(id), 0);
-export const comboName = (ids: string[]) => ids.map((id) => designs.find((d) => d.id === id)?.name ?? id).join(" + ");
+export const comboPrice = (ids: string[], catalog?: OdooCatalog) => ids.reduce((a, id) => a + designPerNail(id, catalog), 0);
+export const comboName = (ids: string[], catalog?: OdooCatalog) => ids.map((id) => {
+  const design = designs.find((d) => d.id === id);
+  return design ? catalog ? odooName(catalog, design.odooCode, design.name) : design.name : id;
+}).join(" + ");
 
 /** Combinaciones distintas de diseños y en qué uñas está cada una */
-export function designCombos(f: Fingers) {
+export function designCombos(f: Fingers, catalog?: OdooCatalog) {
   const map = new Map<string, { ids: string[]; fingers: number[] }>();
   f.forEach((ids, i) => {
     if (!ids.length) return;
@@ -189,7 +206,7 @@ export function designCombos(f: Fingers) {
     map.set(key, c);
   });
   return [...map.values()]
-    .map((c) => ({ ...c, name: comboName(c.ids), perNail: comboPrice(c.ids), price: comboPrice(c.ids) * c.fingers.length }))
+    .map((c) => ({ ...c, name: comboName(c.ids, catalog), perNail: comboPrice(c.ids, catalog), price: comboPrice(c.ids, catalog) * c.fingers.length }))
     .sort((a, b) => b.ids.length - a.ids.length || b.fingers.length - a.fingers.length);
 }
 

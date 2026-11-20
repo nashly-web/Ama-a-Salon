@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteHeader } from "@/components/SiteHeader";
-import { categories, priceLabel } from "@/lib/services";
+import { categoriesFromOdoo, priceLabel } from "@/lib/services";
 import { rd } from "@/lib/nails";
+import { useOdooCatalog } from "@/lib/odoo-catalog";
+import { OdooConnection } from "@/components/OdooConnection";
 
 export const Route = createFileRoute("/servicios")({
   head: () => ({
@@ -18,6 +20,11 @@ export const Route = createFileRoute("/servicios")({
 });
 
 function Servicios() {
+  const catalog = useOdooCatalog();
+  if (catalog.isLoading || !catalog.data) {
+    return <div className="min-h-screen"><SiteHeader back /><main className="mx-auto max-w-6xl px-6 py-16"><OdooConnection loading={!catalog.isError} error={catalog.error} onRetry={() => void catalog.refetch()} /></main></div>;
+  }
+  const categories = categoriesFromOdoo(catalog.data);
   return (
     <div className="min-h-screen">
       <SiteHeader

@@ -14,6 +14,9 @@ import { saveHandoff, type ScanResult } from "@/lib/scan";
 import { scanNails } from "@/lib/scan.functions";
 import { emptyFingers } from "@/lib/nails";
 import { PhotoFrame } from "@/components/escaner/PhotoFrame";
+import { useOdooCatalog, hasOdooProduct } from "@/lib/odoo-catalog";
+import { OdooConnection } from "@/components/OdooConnection";
+import { designs, finishes } from "@/lib/nails";
 
 export const Route = createFileRoute("/escaner")({
   head: () => ({
@@ -34,11 +37,13 @@ const emptyDraft = { systems: [], length: 3, shape: null, finishes: [], fingers:
 function Escaner() {
   const navigate = useNavigate();
   const analyze = useServerFn(scanNails);
+  const catalogQuery = useOdooCatalog();
+  const catalog = catalogQuery.data;
   const [phase, setPhase] = useState<Phase>("pick");
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [scan, setScan] = useState<ScanResult | null>(null);
-  const q = useDraft(emptyDraft);
+  const q = useDraft(emptyDraft, catalog);
 
   const onFile = async (file: Blob) => {
     if (!file.type.startsWith("image/")) { setError("Ese archivo no es una imagen. Elige una foto, por favor."); setPhase("error"); return; }
@@ -67,8 +72,13 @@ function Escaner() {
         setPhase("error");
         return;
       }
-      setScan(res.result);
-      q.reset(draftFromScan(res.result));
+      const synced = {
+        ...res.result,
+        finishes: res.result.finishes.filter((id) => hasOdooProduct(catalog!, finishes.find((f) => f.id === id)?.odooCode)),
+        designsPerFinger: res.result.designsPerFinger.map((ids) => ids.filter((id) => hasOdooProduct(catalog!, designs.find((d) => d.id === id)?.odooCode))),
+      };
+      setScan(synced);
+      q.reset(draftFromScan(synced, catalog));
       setPhase("result");
     } catch {
       setError("Se perdió la conexión al analizar tu foto. Inténtalo de nuevo.");
@@ -81,6 +91,8 @@ function Escaner() {
     saveHandoff(q.state);
     navigate({ to: "/estudio" });
   };
+
+  if (catalogQuery.isLoading || !catalog) return <OdooConnection loading={catalogQuery.isLoading} error={catalogQuery.error} onRetry={() => void catalogQuery.refetch()} />;
 
   return (
     <div className="min-h-screen">
@@ -120,7 +132,7 @@ function Escaner() {
               </div>
             </div>
           )}
-          {phase === "result" && scan && image && <Resultado scan={scan} image={image} q={q} onChange={restart} onUse={use} />}
+          {phase === "result" && scan && image && <Resultado scan={scan} image={image} q={q} onChange={restart} onUse={use} catalog={catalog} />}
         </div>
 
         {phase !== "result" && (

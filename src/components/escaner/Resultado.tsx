@@ -7,14 +7,17 @@ import { Chip, Pill, Section, confidenceLabel } from "./Chips";
 import type { useDraft } from "./useDraft";
 import { PhotoFrame } from "./PhotoFrame";
 import { PriceGuide } from "./PriceGuide";
+import { hasOdooProduct, odooName, odooPrice, type OdooCatalog } from "@/lib/odoo-catalog";
 
-type Props = { scan: ScanResult; image: string; q: ReturnType<typeof useDraft>; onChange: () => void; onUse: () => void };
+type Props = { scan: ScanResult; image: string; q: ReturnType<typeof useDraft>; onChange: () => void; onUse: () => void; catalog: OdooCatalog };
 
-export function Resultado({ scan, image, q, onChange, onUse }: Props) {
+export function Resultado({ scan, image, q, onChange, onUse, catalog }: Props) {
   const { draft, state, total } = q;
   const detected = scan.detectedElements.filter((e) => e.mappedId);
   const unmapped = scan.detectedElements.filter((e) => !e.mappedId);
-  const otherFinishes = finishes.filter((f) => !draft.finishes.includes(f.id));
+  const availableFinishes = finishes.filter((f) => hasOdooProduct(catalog, f.odooCode));
+  const availableDesigns = designs.filter((d) => hasOdooProduct(catalog, d.odooCode));
+  const otherFinishes = availableFinishes.filter((f) => !draft.finishes.includes(f.id));
   const [touched, setTouched] = useState(false);
 
   return (
@@ -66,8 +69,8 @@ export function Resultado({ scan, image, q, onChange, onUse }: Props) {
         <Section title="Tu sistema" hint="No se ve en una foto: marcamos el más económico. Toca otro para cambiarlo.">
           <PriceGuide active={!touched}>
             <div className="flex flex-wrap gap-2">
-              {systemsByPrice(draft.length).map((s) => (
-                <Pill key={s.id} on={draft.systems.includes(s.id)} onClick={() => { setTouched(true); q.selectSystem(s.id); }}>{s.name} · <span data-price>{rd(systemPrice(s.id, draft.length))}</span></Pill>
+              {systemsByPrice(draft.length, catalog).map((s) => (
+                <Pill key={s.id} on={draft.systems.includes(s.id)} onClick={() => { setTouched(true); q.selectSystem(s.id); }}>{s.name} · <span data-price>{rd(systemPrice(s.id, draft.length, catalog))}</span></Pill>
               ))}
             </div>
           </PriceGuide>
@@ -84,7 +87,7 @@ export function Resultado({ scan, image, q, onChange, onUse }: Props) {
           <div className="flex flex-wrap gap-2">
             {shapes.map((s) => (
               <Pill key={s.id} on={draft.shape === s.id} onClick={() => q.setShape(draft.shape === s.id ? null : s.id)} tag={scan.shape === s.id ? "sugerida" : undefined}>
-                {s.name}{s.price ? ` · +${rd(s.price)}` : ""}
+                {odooName(catalog, s.odooCode, s.name)}{(odooPrice(catalog, s.odooCode) ?? s.price) ? ` · +${rd(odooPrice(catalog, s.odooCode) ?? s.price)}` : ""}
               </Pill>
             ))}
           </div>
@@ -94,29 +97,29 @@ export function Resultado({ scan, image, q, onChange, onUse }: Props) {
           <div className="flex flex-wrap gap-2">
             {draft.finishes.length === 0 && <p className="text-sm text-muted-foreground">Sin acabados detectados.</p>}
             {draft.finishes.map((id) => {
-              const f = finishes.find((x) => x.id === id)!;
-              return <Chip key={id} label={f.name} onRemove={() => q.toggleFinish(id)}><span className="font-medium">{f.name}</span><span className="text-xs text-muted-foreground">{rd(f.price)}</span></Chip>;
+              const f = availableFinishes.find((x) => x.id === id)!;
+              return f ? <Chip key={id} label={odooName(catalog, f.odooCode, f.name)} onRemove={() => q.toggleFinish(id)}><span className="font-medium">{odooName(catalog, f.odooCode, f.name)}</span><span className="text-xs text-muted-foreground">{rd(odooPrice(catalog, f.odooCode) ?? 0)}</span></Chip> : null;
             })}
           </div>
           {otherFinishes.length > 0 && (
             <details className="group">
               <summary className="cursor-pointer list-none text-sm font-medium text-primary">+ Añadir otro acabado</summary>
               <div className="mt-2 flex flex-wrap gap-2">
-                {otherFinishes.map((f) => <Pill key={f.id} on={false} onClick={() => q.toggleFinish(f.id)}>{f.name} · {rd(f.price)}</Pill>)}
+                {otherFinishes.map((f) => <Pill key={f.id} on={false} onClick={() => q.toggleFinish(f.id)}>{odooName(catalog, f.odooCode, f.name)} · {rd(odooPrice(catalog, f.odooCode) ?? 0)}</Pill>)}
               </div>
             </details>
           )}
         </Section>
 
         <Section title="Diseños por uña" hint="Cada diseño se cobra por uña. Podrás elegir en qué dedos van en el Estudio.">          <ul className="divide-y divide-border">
-            {designs.map((d) => {
+            {availableDesigns.map((d) => {
               const n = state.set.designs[d.id] ?? 0;
               return (
                 <li key={d.id} className="flex items-center gap-3 py-2.5">
                   <img src={nailImg("design", d.id)} alt="" loading="lazy" width={40} height={40} className={`h-10 w-10 shrink-0 rounded-full object-cover ${n ? "ring-2 ring-primary" : ""}`} />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium leading-tight">{d.name}</span>
-                    <span className="block text-xs text-muted-foreground">{designPriceLabel(d)}</span>
+                    <span className="block text-sm font-medium leading-tight">{odooName(catalog, d.odooCode, d.name)}</span>
+                    <span className="block text-xs text-muted-foreground">{designPriceLabel(d, catalog)}</span>
                   </span>
                   <div className="flex shrink-0 items-center rounded-full bg-secondary text-sm">
                     <button type="button" aria-label={`Quitar ${d.name}`} onClick={() => q.minusDesign(d.id)} disabled={!n} className="h-10 w-10 rounded-full disabled:opacity-30">−</button>

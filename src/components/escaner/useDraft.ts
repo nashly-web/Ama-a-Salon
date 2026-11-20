@@ -1,16 +1,17 @@
 import { useMemo, useState } from "react";
 import { addDesign, cheapestSystem, removeDesign, retiroPrice, selectSystem, totalPrice, type Fingers } from "@/lib/nails";
 import { scanToState, type ScanResult } from "@/lib/scan";
+import type { OdooCatalog } from "@/lib/odoo-catalog";
 
 export type Draft = { systems: string[]; length: number; shape: string | null; finishes: string[]; fingers: Fingers };
 
 const DEFAULT_LENGTH = 3;
 
 /** El sistema no se ve en la foto: arrancamos con el más económico para ese largo */
-export const draftFromScan = (s: ScanResult): Draft => {
+export const draftFromScan = (s: ScanResult, catalog?: OdooCatalog): Draft => {
   const length = s.lengthEstimate ?? DEFAULT_LENGTH;
   return {
-  systems: [cheapestSystem(length)],
+  systems: [cheapestSystem(length, catalog)],
   length,
   shape: s.shape,
   finishes: s.finishes,
@@ -19,15 +20,15 @@ export const draftFromScan = (s: ScanResult): Draft => {
 };
 
 /** Estado editable del resultado y su cotización (siempre con totalPrice del catálogo) */
-export function useDraft(initial: Draft) {
+export function useDraft(initial: Draft, catalog?: OdooCatalog) {
   const [d, setD] = useState(initial);
   const state = useMemo(
     () => scanToState({ shape: d.shape, finishes: d.finishes, designsPerFinger: d.fingers }, { systems: d.systems, length: d.length, shape: d.shape }),
     [d],
   );
   const set = state.set;
-  const total = totalPrice(set);
-  const items = set.systems.length + (set.retiro && retiroPrice(set) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
+  const total = totalPrice(set, catalog);
+  const items = set.systems.length + (set.retiro && retiroPrice(set, catalog) ? 1 : 0) + 1 + (set.shape ? 1 : 0) + set.finishes.length + Object.values(set.designs).filter(Boolean).length;
 
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
   return {

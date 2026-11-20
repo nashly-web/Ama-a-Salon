@@ -1,5 +1,6 @@
 import { chosenSystems, designCombos, finishes, fingerName, lengths, rd, shapes, sizeOf, type Fingers, type NailSet } from "@/lib/nails";
 import { priceRows } from "@/components/estudio/Resumen";
+import { odooName, type OdooCatalog } from "@/lib/odoo-catalog";
 import type { Datos } from "@/components/estudio/Envio";
 
 /**
@@ -12,12 +13,13 @@ export function waNumber(phone: string) {
 }
 
 /** Mensaje de la cotización, ordenado y decorado para WhatsApp (*negrita*, _cursiva_). */
-export function quoteMessage(set: NailSet, fingers: Fingers, d: Datos, total: number) {
-  const sys = chosenSystems(set).map((s) => s.name).join(" + ") || "Por definir";
+export function quoteMessage(set: NailSet, fingers: Fingers, d: Datos, total: number, catalog?: OdooCatalog) {
+  const sys = chosenSystems(set).map((s) => catalog ? odooName(catalog, s.odooCode, s.name) : s.name).join(" + ") || "Por definir";
   const largo = lengths.find((l) => l.id === set.length);
-  const forma = shapes.find((s) => s.id === set.shape)?.name ?? "Por definir";
-  const acabados = set.finishes.map((f) => finishes.find((x) => x.id === f)?.name).filter(Boolean).join(", ") || "Ninguno";
-  const combos = designCombos(fingers);
+  const shape = shapes.find((s) => s.id === set.shape);
+  const forma = shape ? catalog ? odooName(catalog, shape.odooCode, shape.name) : shape.name : "Por definir";
+  const acabados = set.finishes.map((f) => { const option = finishes.find((x) => x.id === f); return option ? catalog ? odooName(catalog, option.odooCode, option.name) : option.name : undefined; }).filter(Boolean).join(", ") || "Ninguno";
+  const combos = designCombos(fingers, catalog);
   const domicilio = d.modalidad === "domicilio";
 
   const lines = [
@@ -43,7 +45,7 @@ export function quoteMessage(set: NailSet, fingers: Fingers, d: Datos, total: nu
     ...combos.map((c) => `   ◦ ${c.name} — ${c.fingers.map(fingerName).join(", ")}`),
     "",
     "🧾 *Desglose*",
-    ...priceRows(set).map((r) => `• ${r.label}: ${r.price ? rd(r.price) : "Incluido"}`),
+    ...priceRows(set, catalog).map((r) => `• ${r.label}: ${r.price ? rd(r.price) : "Incluido"}`),
     "",
     `💰 *Total estimado: ${rd(total)}*`,
     ...(domicilio ? ["_(Cargo a domicilio por confirmar)_"] : []),

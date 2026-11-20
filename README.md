@@ -22,13 +22,17 @@ digital de uñas donde se diseña un set y se cotiza al instante (precios en RD$
    npm install
    ```
 
-4. Inicia el sitio en modo desarrollo:
+4. Configura la conexión local con Odoo. Copia `.env.example` a `.env.local` y
+   define `VITE_ODOO_URL` con la dirección base del servidor Odoo. Para este
+   entorno local, Odoo escucha en `http://localhost:8030`.
+
+5. Inicia el sitio en modo desarrollo:
 
    ```sh
    npm run dev
    ```
 
-5. Abre en tu navegador la dirección que aparece en la terminal
+6. Abre en tu navegador la dirección que aparece en la terminal
    (normalmente <http://localhost:3000> o <http://localhost:5173>).
 
 Para detenerlo, presiona `Ctrl + C` en la terminal.
@@ -49,6 +53,19 @@ Para detenerlo, presiona `Ctrl + C` en la terminal.
 - `src/lib/nails.ts` — lista oficial de precios de uñas y cálculo del total.
 - `src/lib/services.ts` — lista de servicios y precios del salón.
 - `src/assets/` — fotos e imágenes del sitio.
+
+## Sincronización de precios con Odoo
+
+Los precios de servicios, variantes por tamaño, acabados y cotizaciones se
+consultan en tiempo real desde `GET /api/amaia/catalog` del módulo Odoo
+`amaia_catalog_api`. El catálogo se actualiza cada minuto y al volver a enfocar
+la página. La moneda esperada es DOP (RD$); si Odoo no responde o la compañía no
+está configurada en DOP, la web muestra un error de conexión y no presenta una
+tarifa local desactualizada.
+
+En producción, `VITE_ODOO_URL` debe ser la URL HTTPS pública de Odoo que puedan
+alcanzar los visitantes del sitio; `localhost` solo sirve para desarrollo en la
+misma computadora.
 
 ## Tecnologías
 
